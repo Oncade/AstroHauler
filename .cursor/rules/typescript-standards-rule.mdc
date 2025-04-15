@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# TypeScript Standards
+
+## Type Definitions
+- Define proper interfaces for all objects
+- Use TypeScript's strict mode features
+- Avoid using `any` type when possible
+- Leverage Phaser's built-in types (e.g., `Phaser.Types.Core.GameConfig`)
+- Define proper return types for functions
+
+## Code Organization
+- Keep files under 300 lines of code
+- Follow single responsibility principle
+- Use proper access modifiers (private, protected, public)
+- Initialize class properties with proper types
+
+## React-TypeScript Integration
+- Use proper typing for React components and props
+- Leverage TypeScript's type inference where appropriate
+- Define interfaces for component props and state
+- Use type guards when necessary
+
+## Documentation
+- Document complex functions with JSDoc comments
+- Include parameter types and return types in documentation
+- Document event payloads used with EventBus
+- Keep documentation up-to-date with code changes 

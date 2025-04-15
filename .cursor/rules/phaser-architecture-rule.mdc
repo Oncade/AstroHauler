@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+
+# Phaser Architecture Rules
+
+## Scene Management
+- Always emit the `current-scene-ready` event via EventBus at the end of the `create()` method
+- Follow the standard scene lifecycle: `init -> preload -> create -> update`
+- Initialize class properties in the constructor or create method
+- Be careful with asset preloading - use the Preloader scene for most assets
+
+## Communication with React
+- Use EventBus for communication between React and Phaser
+- Expose scene references properly when needed via `EventBus.emit('current-scene-ready', this)`
+- Don't directly manipulate DOM elements from Phaser scenes
+- Keep business logic in appropriate locations (React for UI, Phaser for game)
+
+## Performance
+- Use object pools for frequently created/destroyed objects
+- Properly destroy game objects when no longer needed
+- Be mindful of memory leaks in event listeners
+- Use appropriate physics systems based on needs (Arcade, Matter, etc.)
+- Use sprite sheets for animations

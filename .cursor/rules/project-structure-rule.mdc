@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+
+# Project Structure Rules
+
+## Directory Organization
+- Keep React components in `src/` root
+- Place all Phaser game code in `src/game/`
+- Organize Phaser scenes in `src/game/scenes/`
+- Store assets in `public/assets/`
+- Use appropriate file extensions: `.tsx` for React, `.ts` for TypeScript
+
+## Asset Management
+- Place all game assets in `public/assets/`
+- Use proper loading techniques in Phaser's preload method
+- Follow asset naming conventions consistently
+- Consider using texture atlases for related sprites
+
+## Module Organization
+- Use proper TypeScript imports and exports
+- Avoid circular dependencies
+- Keep modules focused on a single responsibility
+- Use barrel exports where appropriate to simplify imports
+
+## Configuration
+- Store game configuration in `src/game/main.ts`
+- Use constants for magic values
+- Consider extracting configuration to dedicated config files for complex setups
+- Follow the template's organization for new features 

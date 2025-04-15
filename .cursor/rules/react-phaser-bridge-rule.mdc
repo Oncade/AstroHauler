@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+
+# React-Phaser Bridge Rules
+
+## Component Structure
+- Use the PhaserGame component as the bridge between React and Phaser
+- Maintain the ref pattern to access game and scene instances
+- Follow React best practices for state management with Phaser
+
+## EventBus Usage
+- Use EventBus for all communications between React and Phaser
+- Keep event names consistent and documented
+- Clean up event listeners in useEffect return functions
+- Be careful with event payload structure
+
+## State Management
+- Determine whether state should live in React or Phaser
+- Avoid duplicating state between React and Phaser
+- Use React for UI state, Phaser for game state
+- Consider performance implications when sharing large amounts of data
+
+## Rendering
+- Never manipulate the Phaser canvas directly from React
+- Keep the React component tree clean and focused
+- Use React for UI elements, Phaser for game elements
+- Ensure proper cleanup when components unmount 

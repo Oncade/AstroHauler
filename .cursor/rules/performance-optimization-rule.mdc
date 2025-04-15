@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Performance Optimization Rules
+
+## Phaser Game Optimization
+- Use appropriate physics system based on needs
+- Implement object pooling for frequently created/destroyed objects
+- Properly manage asset loading and memory usage
+- Use sprite sheets and texture atlases for related images
+- Implement scene transitions properly to avoid memory leaks
+
+## React Performance
+- Avoid unnecessary re-renders with proper component structure
+- Use React.memo() for pure components
+- Implement proper dependency arrays in useEffect hooks
+- Properly clean up resources in useEffect return functions
+
+## Event Handling
+- Clean up event listeners when components unmount
+- Avoid excessive event dispatching between React and Phaser
+- Consider batching updates when possible
+- Be mindful of event payload size
+
+## Asset Loading
+- Preload assets appropriately
+- Consider implementing asset loading strategies
+- Use proper image formats and compression
+- Implement proper loading screens for large assets
+
+## General Best Practices
+- Profile your application regularly
+- Monitor memory usage
+- Avoid blocking the main thread with long operations
+- Consider web workers for heavy computations 
