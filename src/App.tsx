@@ -1,101 +1,84 @@
 import { useRef, useState } from 'react';
-import { IRefPhaserGame, PhaserGame } from './game/PhaserGame';
-import { MainMenu } from './game/scenes/MainMenu';
+import { PhaserGame } from './game/PhaserGame';
+import { EventBus } from './game/EventBus';
+import { GameOverScreen } from './components/GameOverScreen';
+import { MainMenu } from './components/MainMenu';
+import { GameUI } from './components/GameUI';
 
-function App()
-{
-    // The sprite can only be moved in the MainMenu Scene
-    const [canMoveSprite, setCanMoveSprite] = useState(true);
-
-    //  References to the PhaserGame component (game and scene are exposed)
-    const phaserRef = useRef<IRefPhaserGame | null>(null);
+function App() {
+    // The sprite positions
     const [spritePosition, setSpritePosition] = useState({ x: 0, y: 0 });
+    const phaserRef = useRef<any>();
+    const [currentScene, setCurrentScene] = useState<string | null>(null);
+    const [score, setScore] = useState(0);
 
-    const changeScene = () => {
+    // Listen to the state change from Phaser event
+    const currentSceneActive = (scene: Phaser.Scene) => {
+        console.log('React received scene ready: ', scene.scene.key);
+        setCurrentScene(scene.scene.key); // Store scene key
 
-        if(phaserRef.current)
-        {     
-            const scene = phaserRef.current.scene as MainMenu;
-            
-            if (scene)
-            {
-                scene.changeScene();
-            }
-        }
+        // Example of listening for game events (score updates, game over)
+        EventBus.on('update-score', (newScore: number) => {
+            setScore(newScore);
+        });
+        EventBus.on('game-over', (finalScore: number) => {
+            console.log('React received game-over event with score:', finalScore);
+            setScore(finalScore); // Ensure score is updated for game over screen
+            setCurrentScene('GameOverScene'); // Explicitly set state for React UI
+        });
+
+        // Clean up listeners when scene changes
+        // Note: This cleanup might need refinement depending on event lifecycle
+        scene.events.on('shutdown', () => {
+            console.log(`React cleaning up listeners for ${scene.scene.key}`);
+            EventBus.off('update-score');
+            EventBus.off('game-over');
+        });
     }
 
-    const moveSprite = () => {
+    const handleRestart = () => {
+        console.log('React handleRestart');
+        setCurrentScene(null); // Reset scene state
+        setScore(0);
+        // Tell Phaser to restart the game scene
+        EventBus.emit('restart-game'); 
+    };
 
-        if(phaserRef.current)
-        {
+    const handleMainMenu = () => {
+        console.log('React handleMainMenu');
+        setCurrentScene(null); // Reset scene state
+        setScore(0);
+        // Tell Phaser to go to the main menu scene
+        EventBus.emit('go-to-main-menu');
+    };
 
-            const scene = phaserRef.current.scene as MainMenu;
-
-            if (scene && scene.scene.key === 'MainMenu')
-            {
-                // Get the update logo position
-                scene.moveLogo(({ x, y }) => {
-
-                    setSpritePosition({ x, y });
-
-                });
-            }
+    // Render different React UI components based on the current Phaser scene key
+    const renderUI = () => {
+        switch (currentScene) {
+            case 'MainMenuScene':
+                return <MainMenu />;
+            case 'GameScene':
+                return <GameUI score={score} />;
+            case 'GameOverScene':
+                return <GameOverScreen score={score} onRestart={handleRestart} onMainMenu={handleMainMenu} />;
+            default:
+                return null; // Or a loading indicator
         }
-
-    }
-
-    const addSprite = () => {
-
-        if (phaserRef.current)
-        {
-            const scene = phaserRef.current.scene;
-
-            if (scene)
-            {
-                // Add more stars
-                const x = Phaser.Math.Between(64, scene.scale.width - 64);
-                const y = Phaser.Math.Between(64, scene.scale.height - 64);
-    
-                //  `add.sprite` is a Phaser GameObjectFactory method and it returns a Sprite Game Object instance
-                const star = scene.add.sprite(x, y, 'star');
-    
-                //  ... which you can then act upon. Here we create a Phaser Tween to fade the star sprite in and out.
-                //  You could, of course, do this from within the Phaser Scene code, but this is just an example
-                //  showing that Phaser objects and systems can be acted upon from outside of Phaser itself.
-                scene.add.tween({
-                    targets: star,
-                    duration: 500 + Math.random() * 1000,
-                    alpha: 0,
-                    yoyo: true,
-                    repeat: -1
-                });
-            }
-        }
-    }
-
-    // Event emitted from the PhaserGame component
-    const currentScene = (scene: Phaser.Scene) => {
-
-        setCanMoveSprite(scene.scene.key !== 'MainMenu');
-        
     }
 
     return (
         <div id="app">
-            <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
+            <PhaserGame ref={phaserRef} currentActiveScene={currentSceneActive} />
             <div>
-                <div>
-                    <button className="button" onClick={changeScene}>Change Scene</button>
-                </div>
-                <div>
-                    <button disabled={canMoveSprite} className="button" onClick={moveSprite}>Toggle Movement</button>
-                </div>
-                <div className="spritePosition">Sprite Position:
-                    <pre>{`{\n  x: ${spritePosition.x}\n  y: ${spritePosition.y}\n}`}</pre>
-                </div>
-                <div>
-                    <button className="button" onClick={addSprite}>Add New Sprite</button>
-                </div>
+                {renderUI()}
+                {/* Original template example text - can be removed */}
+                {/* <div>
+                    <p>Sprite Position:</p>
+                    <pre>{`{
+  x: ${spritePosition.x}
+  y: ${spritePosition.y}
+}`}</pre>
+                </div> */}
             </div>
         </div>
     )
