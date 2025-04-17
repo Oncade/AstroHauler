@@ -113,11 +113,11 @@ src/
 ## Asset Requirements (Minimum Viable Product - Phase 1, Week 1 & 2 Focus)
 
 ### Graphics
-- [X] Player ship sprite (Placeholder created: `ship_placeholder.png`)
-- [X] Parent ship sprite *(Placeholder created: `parent_ship_placeholder.png`)*
-- [X] 1 salvage item sprite *(Placeholder created: `salvage_placeholder.png`, mass indicated by alpha)*
+- [X] Player ship sprite (Placeholder created: `ship_placeholder.png`)*(Update - asset added as:'ship.png')*
+- [X] Parent ship sprite *(Placeholder created: `parent_ship_placeholder.png`)* *(Update - asset added as:'parent_ship.png')*
+- [X] 1 salvage item sprite *(Placeholder created: `salvage_placeholder.png`, mass indicated by alpha)* *(Update - asset added as:'salvage.png')*
 - [ ] 3-5 different salvage item sprites *(Deferred - need more assets)*
-- [ ] Simple space background *(Deferred)*
+- [X] Simple space background *(Update - asset added as: 'Starfield.png')*
 - [X] UI elements (buttons, score display, etc.) *(Text-based placeholders implemented)*
 
 ### Audio

@@ -9,7 +9,8 @@ import {
     ControlKeys,
     SalvageConfig,
     getRandomSalvageMass,
-    ParentShipConfig
+    ParentShipConfig,
+    BackgroundConfig
 } from '../config/GameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -31,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
         // Load assets if not already loaded in PreloaderScene
         this.load.image('salvage_placeholder', 'assets/images/salvage_placeholder.png'); // Example placeholder
         this.load.image('parent_ship_placeholder', 'assets/images/parent_ship_placeholder.png'); // Example placeholder
+        this.load.image(BackgroundConfig.textureKey, BackgroundConfig.imagePath); // <-- Load starfield
         console.log('GameScene preload: Placeholders loaded');
     }
 
@@ -39,12 +41,14 @@ export default class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Set world bounds (adjust size if needed)
-        this.physics.world.setBounds(0, 0, width * 1.5, height * 1.5); // Larger world
+        const worldWidth = width * 1.5;
+        const worldHeight = height * 1.5;
+        this.physics.world.setBounds(0, 0, worldWidth, worldHeight); // Larger world
 
-        // Background
-        this.cameras.main.setBackgroundColor('#000010');
-        // Optional: Add a tiled background image
-        // this.add.tileSprite(0, 0, width * 1.5, height * 1.5, 'background_texture').setOrigin(0, 0);
+        // Add Background FIRST
+        this.add.tileSprite(0, 0, worldWidth, worldHeight, BackgroundConfig.textureKey)
+            .setOrigin(0, 0)
+            .setScrollFactor(0); // Keep fixed relative to camera
 
         // Create Player
         this.player = new Player(this, width * 0.5, height * 0.5); // Start near center
@@ -129,7 +133,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-        this.cameras.main.setBounds(0, 0, width * 1.5, height * 1.5);
+        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
         // Emit the ready event for React bridge
         EventBus.emit('current-scene-ready', this);

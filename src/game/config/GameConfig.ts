@@ -46,6 +46,12 @@ export const TetherConfig = {
     lineWidth: 2,
 };
 
+// Background Config
+export const BackgroundConfig = {
+    textureKey: 'starfield',
+    imagePath: 'assets/images/Starfield.png'
+};
+
 // Salvage Config
 export const SalvageConfig = {
     defaultMass: 1,
