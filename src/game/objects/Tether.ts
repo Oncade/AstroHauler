@@ -1,87 +1,100 @@
 import Phaser from 'phaser';
 import Player from './Player';
 import Salvage from './Salvage';
+import { TetherConfig } from '../config/GameConfig';
 
 // Placeholder for the Tether System (Week 2)
 export default class Tether {
     private scene: Phaser.Scene;
     private player: Player;
-    private attachedSalvage: Salvage | null = null;
+    private salvage: Salvage;
     private graphics: Phaser.GameObjects.Graphics; // For drawing the line
-    // private constraint: any | null = null; // Arcade constraints are limited, placeholder
-    private maxLength: number = 150; // Example max tether length
+    private springForce: Phaser.Math.Vector2; // To store calculated force
+    private tempVec: Phaser.Math.Vector2; // Reusable vector for calculations
 
-    constructor(scene: Phaser.Scene, player: Player) {
+    constructor(scene: Phaser.Scene, player: Player, salvage: Salvage) {
         this.scene = scene;
         this.player = player;
-        this.graphics = scene.add.graphics({ lineStyle: { width: 2, color: 0x00ffff } });
-        console.log('Tether system initialized');
+        this.salvage = salvage;
+
+        // Notify player and salvage
+        this.player.attachTether(this.salvage);
+        this.salvage.startTether(this.player);
+
+        this.graphics = scene.add.graphics({ lineStyle: { width: TetherConfig.lineWidth, color: TetherConfig.lineColor } });
+        this.springForce = new Phaser.Math.Vector2(0, 0);
+        this.tempVec = new Phaser.Math.Vector2(0, 0);
+
+        console.log('Tether created between Player and Salvage');
     }
 
-    attach(salvage: Salvage) {
-        if (this.attachedSalvage) {
-            console.log('Already tethered to something!');
-            return; // Already towing something
-        }
-        this.attachedSalvage = salvage;
-        console.log('Tether attached to salvage');
-
-        // --- Placeholder Constraint Logic (Arcade Physics Example) ---
-        // Arcade physics constraints are limited. Might need Matter.js or custom logic.
-        // this.constraint = this.scene.physics.add.constraint(this.player, this.attachedSalvage, this.maxLength, 0.1); // stiffness
-
-        // Ensure salvage physics properties are set for towing
-        this.attachedSalvage.setCollideWorldBounds(true);
-        this.attachedSalvage.setBounce(0.3);
-        this.attachedSalvage.setDrag(80); // Increase drag when towed?
-    }
-
-    detach() {
-        if (!this.attachedSalvage) {
+    update(delta: number) {
+        if (!this.player.body || !this.salvage.body) {
+            console.warn('Tether update skipped: Player or Salvage body missing.');
+            this.destroy(); // Destroy tether if objects are gone
             return;
         }
-        console.log('Tether detached');
-        // if (this.constraint) {
-        //     this.scene.physics.world.removeConstraint(this.constraint);
-        //     this.constraint = null;
-        // }
-        // Reset salvage physics?
-        this.attachedSalvage = null;
-    }
 
-    update() {
+        // --- Draw Line ---
         this.graphics.clear();
+        this.graphics.lineStyle(TetherConfig.lineWidth, TetherConfig.lineColor, 1.0);
+        this.graphics.lineBetween(this.player.x, this.player.y, this.salvage.x, this.salvage.y);
 
-        if (this.attachedSalvage) {
-            // Draw the tether line
-            this.graphics.lineBetween(
-                this.player.x,
-                this.player.y,
-                this.attachedSalvage.x,
-                this.attachedSalvage.y
-            );
+        // --- Apply Simulated Spring Force (Arcade Physics) ---
+        const currentLength = Phaser.Math.Distance.BetweenPoints(this.player, this.salvage);
+        const extension = currentLength - TetherConfig.maxLength;
 
-            // --- Placeholder Tether Physics Logic ---
-            // Apply spring-like forces or handle constraint updates here
-            // For Arcade physics, might need manual force application:
-            const distance = Phaser.Math.Distance.BetweenPoints(this.player, this.attachedSalvage);
-            if (distance > this.maxLength && this.attachedSalvage.body) {
-                // Simple pull force towards player (needs refinement)
-                const angle = Phaser.Math.Angle.BetweenPoints(this.attachedSalvage, this.player);
-                const forceMagnitude = (distance - this.maxLength) * 0.5; // Basic spring force
-                this.scene.physics.velocityFromRotation(angle, forceMagnitude * this.attachedSalvage.mass, (this.attachedSalvage.body.velocity as Phaser.Math.Vector2));
-                // Apply counter-force to player?
+        if (extension > 0) { // Only apply force if tether is stretched
+            // Calculate force direction (from salvage to player)
+            this.tempVec.copy(this.player.body.center).subtract(this.salvage.body.center).normalize();
+
+            // Calculate Spring Force (Hooke's Law: F = -k * x)
+            // We use a positive constant and apply direction manually
+            const forceMagnitude = extension * TetherConfig.springConstant;
+            this.springForce.copy(this.tempVec).scale(forceMagnitude);
+
+            // Apply Damping Force (F = -c * v)
+            // Relative velocity along the tether direction
+            const relativeVelocity = this.tempVec.clone().copy(this.player.body.velocity).subtract(this.salvage.body.velocity);
+            const dampingFactor = relativeVelocity.dot(this.tempVec) * TetherConfig.damping;
+            const dampingForce = this.tempVec.clone().scale(-dampingFactor);
+
+            // Combine forces
+            const totalForce = this.springForce.add(dampingForce);
+
+            // Apply forces to bodies (scaled by delta for acceleration)
+            // Scale force by inverse mass (or apply directly if mass handled by physics engine)
+            // Arcade physics uses acceleration, so scaling by delta and mass is appropriate
+            const dt = delta / 1000; // Convert delta ms to seconds
+
+            if (this.salvage.body instanceof Phaser.Physics.Arcade.Body) {
+                const salvageAccel = totalForce.clone().scale(1 / this.salvage.mass); // F=ma -> a=F/m
+                this.salvage.body.acceleration.add(salvageAccel);
             }
+            if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
+                const playerForce = totalForce.clone().scale(-1); // Equal and opposite force
+                // Assuming player mass is 1 for now, or get it from config/player properties
+                const playerAccel = playerForce.scale(1); // Player mass assumed 1
+                this.player.body.acceleration.add(playerAccel);
+            }
+        } else {
+             // Optional: Add some drag or minimal force if length < minLength?
         }
     }
 
-    isAttached(): boolean {
-        return this.attachedSalvage !== null;
+    getAttachedSalvage(): Salvage {
+        return this.salvage;
     }
 
     destroy() {
         this.graphics.destroy();
-        this.detach(); // Ensure cleanup
-        console.log('Tether system destroyed');
+        // Ensure player and salvage know the tether is gone
+        if (this.player.tetheredObject === this.salvage) {
+            this.player.detachTether();
+        }
+        if (this.salvage.tetheredBy === this.player) {
+            this.salvage.endTether();
+        }
+        console.log('Tether destroyed');
     }
 } 

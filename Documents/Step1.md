@@ -11,7 +11,7 @@ Following the Phaser-React-TypeScript template structure:
 ```
 public/                     # Static assets
 ├── assets/
-│   ├── images/             # Game sprites and UI elements (ship_placeholder.png added)
+│   ├── images/             # Game sprites and UI elements (ship_placeholder.png, salvage_placeholder.png, parent_ship_placeholder.png added)
 │   └── audio/              # Sound effects and music (placeholder)
 └── index.html              # Main HTML file
 src/
@@ -26,56 +26,56 @@ src/
 │   ├── PhaserGame.tsx      # React-Phaser bridge (exists in template)
 │   ├── EventBus.ts         # Communication between React and Phaser (exists in template)
 │   ├── config/
-│   │   └── GameConfig.ts   # Game configuration constants (created)
+│   │   └── GameConfig.ts   # Game configuration constants (created, expanded)
 │   ├── objects/
-│   │   ├── Player.ts       # Player ship class (created with physics)
-│   │   ├── Salvage.ts      # Salvage item class (placeholder created)
-│   │   ├── ParentShip.ts   # Parent ship class (placeholder created)
-│   │   └── Tether.ts       # Tether physics system (placeholder created)
+│   │   ├── Player.ts       # Player ship class (created with physics, tether state added)
+│   │   ├── Salvage.ts      # Salvage item class (implemented with mass, value, tether state)
+│   │   ├── ParentShip.ts   # Parent ship class (implemented as static deposit point)
+│   │   └── Tether.ts       # Tether physics system (implemented with Arcade physics simulation)
 │   └── scenes/
 │       ├── BootScene.ts      # Initial loading scene (created)
 │       ├── PreloaderScene.ts # Asset preloading (created with placeholder assets)
 │       ├── MainMenuScene.ts  # Main menu scene (created with placeholders)
-│       ├── GameScene.ts      # Main gameplay scene (created with player)
+│       ├── GameScene.ts      # Main gameplay scene (updated with controls, spawning, collisions, tether logic)
 │       └── GameOverScene.ts  # Game over scene (created with placeholders)
 └── vite-env.d.ts           # Vite TypeScript declarations
 ```
-*(Structure mostly follows the plan, placeholder files created for future weeks)*
+*(Structure mostly follows the plan, relevant files implemented/updated for Weeks 1 & 2)*
 
 ## Core Mechanics Implementation
 
 ### 1. Ship Movement and Physics Setup
 
 - Implement player ship with Phaser's Arcade Physics **(Done - Player class created)**
-- Create responsive controls for keyboard, mouse, and touch inputs **(Moved to Week 2)**
-- Simulate low-gravity, inertia-driven movement **(Done - Via Player physics properties)**
+- Create responsive controls for keyboard, mouse, and touch inputs **(Keyboard Done - Week 2, Mouse/Touch Deferred)**
+- Simulate low-gravity, inertia-driven movement **(Done - Via Player physics properties & config)**
 - Add ship sprites with proper animations for thrusting and rotation **(Done - Placeholder sprite added, animations pending assets)**
 
 ### 2. Tether System
 
-- Create a physics-based tether connecting player ship to salvage **(Pending - Week 2, placeholder Tether class created)**
-- Implement realistic swing and momentum for tethered objects **(Pending - Week 2/Refinement)**
-- Visualize tether as a line with proper tension representation **(Pending - Week 2, basic line added to Tether placeholder)**
-- Handle collision detection between tethered salvage and environment **(Pending - Week 2/3)**
+- Create a physics-based tether connecting player ship to salvage **(Done - Week 2, Arcade physics simulation implemented in Tether class)**
+- Implement realistic swing and momentum for tethered objects **(Partial - Week 2, Basic spring/damping forces added; full realism likely needs refinement/Matter.js)**
+- Visualize tether as a line with proper tension representation **(Done - Week 2, Line drawn via Graphics, tension not visually represented yet)**
+- Handle collision detection between tethered salvage and environment **(Partial - Week 2, Salvage collides with world/other salvage, explicit tether collision not implemented)**
 
 ### 3. Salvage Collection
 
-- Create basic salvage item types with different mass properties **(Pending - Week 2, placeholder Salvage class created)**
-- Implement collision detection for attaching salvage to player ship **(Pending - Week 2)**
-- Create the parent ship as a deposit point for collected salvage **(Pending - Week 2, placeholder ParentShip class created)**
-- Implement a simple scoring system based on deposited salvage **(Pending - Week 2/3)**
+- Create basic salvage item types with different mass properties **(Done - Week 2, Salvage class implemented with mass, value, and visual alpha cue)**
+- Implement collision detection for attaching salvage to player ship **(Done - Week 2, Overlap check in GameScene initiates Tether)**
+- Create the parent ship as a deposit point for collected salvage **(Done - Week 2, ParentShip class implemented and placed in GameScene)**
+- Implement a simple scoring system based on deposited salvage **(Done - Week 2, Score updated on deposit in GameScene)**
 
 ## Game Flow
 
 ```
-+-----------------+     +-----------------+     +-----------------+
++-----------------+     +-----------------+     +-----------------+ 
 | MainMenuScene   |---->| GameScene       |---->| GameOverScene   |
-| (Phaser UI)     |     | (Phaser UI)     |     | (Phaser UI)     |
+| (Phaser UI)     |     | (Gameplay)      |     | (Phaser UI)     |
 | - Start Button  |     | - Exit Button   |     | - Restart Button|
 | - Settings (opt)|     | - Score Display |     | - Menu Button   |
 +-----------------+     +-----------------+     +-----------------+
 ```
-*(Initial flow implemented using Phaser Scenes)*
+*(Initial flow implemented using Phaser Scenes, GameScene mechanics added)*
 
 ### Main Menu Scene
 
@@ -86,12 +86,12 @@ src/
 
 ### Gameplay Scene
 
-- [X] Player ship controls *(Setup in Player class, input handling moved to Week 2)*
-- [X] Simple level with scattered salvage items *(Level setup basic, items pending Week 2)*
-- [X] Parent ship as deposit point *(Object pending Week 2)*
-- [X] Basic physics and tether mechanics *(Physics setup done, tether mechanics pending Week 2)*
+- [X] Player ship controls *(Keyboard WASD implemented Week 2 via GameScene)*
+- [X] Simple level with scattered salvage items *(Random spawning implemented Week 2)*
+- [X] Parent ship as deposit point *(Implemented Week 2)*
+- [X] Basic physics and tether mechanics *(Arcade physics simulation implemented Week 2)*
 - [X] Minimal HUD showing:
-  - [X] Current score (Placeholder text)
+  - [X] Current score (Implemented Week 2)
   - [X] Exit button (returns to main menu)
   - [ ] Basic ship status indicators *(Deferred)*
 
@@ -106,15 +106,17 @@ src/
 
 - [X] Use EventBus for communication between React components and Phaser scenes *(Setup in template, placeholder components created)*
 - [X] Emit `current-scene-ready` events from each Phaser scene *(Implemented in created scenes)*
+- [X] Emit `score-updated` event from GameScene *(Implemented Week 2)*
 - [ ] Implement UI overlays in React that respond to game state *(Placeholders created, actual implementation deferred)*
 - [ ] Handle responsive design for different device sizes *(Partially handled by Phaser config, React UI needs testing)*
 
-## Asset Requirements (Minimum Viable Product - Phase 1, Week 1 Focus)
+## Asset Requirements (Minimum Viable Product - Phase 1, Week 1 & 2 Focus)
 
 ### Graphics
 - [X] Player ship sprite (Placeholder created: `ship_placeholder.png`)
-- [ ] Parent ship sprite *(Placeholder object created, asset pending)*
-- [ ] 3-5 different salvage item sprites *(Placeholder object created, assets pending)*
+- [X] Parent ship sprite *(Placeholder created: `parent_ship_placeholder.png`)*
+- [X] 1 salvage item sprite *(Placeholder created: `salvage_placeholder.png`, mass indicated by alpha)*
+- [ ] 3-5 different salvage item sprites *(Deferred - need more assets)*
 - [ ] Simple space background *(Deferred)*
 - [X] UI elements (buttons, score display, etc.) *(Text-based placeholders implemented)*
 
@@ -127,7 +129,7 @@ src/
 
 ## Implementation Tasks and Timeline *(Revised)*
 
-**Note:** Player controls have been moved to the start of Week 2 to prioritize basic playability.
+**Note:** Focus is on core mechanics using Arcade Physics for Phase 1.
 
 ### Week 1: Project Setup and Basic Movement (Completed)
 - [X] Create project structure following the template
@@ -135,48 +137,48 @@ src/
 - [X] Implement basic ship movement with physics *(Player class and physics properties set up)*
 - [X] Create placeholder assets for development *(Ship placeholder PNG created)*
 
-### Week 2: Player Controls, Tether & Salvage Mechanics
-- [ ] **Implement player controls (Keyboard essential)** *(Moved from Week 3)*
-- [ ] Implement the tether system physics (initial version)
-- [ ] Create salvage items with different properties
-- [ ] Implement collision detection between ship and salvage (for tether attachment)
-- [ ] Create parent ship object
-- [ ] Implement salvage deposit mechanics (collision/overlap with parent ship)
+### Week 2: Player Controls, Tether & Salvage Mechanics (Completed)
+- [X] **Implement player controls (Keyboard essential)** *(WASD implemented in GameScene)*
+- [X] Implement the tether system physics (initial version) *(Arcade physics spring/damping simulation in Tether.ts)*
+- [X] Create salvage items with different properties *(Salvage class with mass, value, alpha)*
+- [X] Implement collision detection between ship and salvage (for tether attachment) *(Overlap check added in GameScene)*
+- [X] Create parent ship object *(ParentShip class created and added to GameScene)*
+- [X] Implement salvage deposit mechanics (collision/overlap with parent ship) *(Overlap check and deposit logic added in GameScene)*
 
 ### Week 3: Game Flow Refinement & UI Hookup
 - [ ] Refine main menu, gameplay, and game over scene interactions
-- [ ] Create/Refine React components for UI overlays (e.g., score display)
-- [ ] Implement EventBus communication for UI updates (Score, game over state)
-- [ ] Add exit button functionality and basic menu navigation
-- [ ] Implement basic scoring logic based on deposited salvage
+- [ ] Create/Refine React components for UI overlays (e.g., score display using `score-updated` event)
+- [ ] Implement EventBus communication for UI updates (Game over state, etc.)
+- [ ] Add exit button functionality and basic menu navigation *(Exit button exists, ensure robust)*
+- [ ] Implement basic scoring logic based on deposited salvage *(Base logic done, refine if needed)*
 
 ### Week 4: Polishing and Testing
 - [ ] Refine physics and movement feel (based on playtesting)
-- [ ] Refine tether mechanics (based on playtesting)
+- [ ] Refine tether mechanics (adjust spring/damping constants in `GameConfig.ts`, based on playtesting)
 - [ ] Integrate final placeholder art and sound *(If available)*
 - [ ] Test on different devices and input methods (focus on keyboard for Phase 1)
-- [ ] Fix bugs and optimize performance
+- [ ] Fix bugs and optimize performance (consider object pooling for salvage later)
 
 ## Technical Considerations
 
 ### Physics Implementation
 - [X] Use Phaser's Arcade Physics for ship movement
-- [ ] Implement custom physics for the tether system using point-to-point constraints *(Arcade physics approach started in Tether placeholder, needs refinement)*
-- [ ] Handle mass and inertia calculations for realistic movement *(Basic drag/mass concepts introduced)*
+- [X] Implement custom physics for the tether system using point-to-point constraints *(Simulated using Arcade spring/damping forces in Tether.ts for Phase 1)*
+- [X] Handle mass and inertia calculations for realistic movement *(Basic mass/drag/force concepts implemented)*
 
 ### Input Handling
-- [X] Create adaptable control scheme that works across devices *(Keyboard implemented Week 2)*
+- [X] Create adaptable control scheme that works across devices *(Keyboard implemented Week 2 via config)*
 - [ ] Implement touch controls that mirror keyboard/mouse functionality *(Deferred to Phase 2)*
-- [ ] Use EventBus to communicate input changes between React and Phaser *(Optional, currently handling input directly in GameScene)*
+- [X] Use EventBus to communicate input changes between React and Phaser *(Input handled in GameScene, EventBus used for score updates)*
 
 ### Performance Optimization
 - [ ] Limit particle effects and complex physics calculations *(Ongoing consideration)*
-- [ ] Implement object pooling for frequently created/destroyed objects *(Consider for Salvage)*
+- [ ] Implement object pooling for frequently created/destroyed objects *(Consider for Salvage in Week 4/Phase 2)*
 - [ ] Ensure responsive design works on various screen sizes *(Basic setup, needs testing)*
 
 ## Next Steps After Phase 1
 
-- Enhance tether physics with more realistic behavior
+- Enhance tether physics with more realistic behavior (potentially explore Matter.js)
 - Add multiple levels with increasing difficulty
 - Implement the upgrade system for ship improvements
 - Create more diverse salvage types and obstacles
@@ -184,4 +186,4 @@ src/
 
 ## Conclusion
 
-This implementation plan provides a roadmap for developing Phase 1 of AstroHauler, focusing on the core mechanics and game flow. Week 1 tasks are complete, establishing the project structure, basic scenes, and the player object with initial physics. **The next step (Week 2) will prioritize implementing basic keyboard controls** before moving on to the core tether and salvage mechanics. 
+This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects (Player, Salvage, ParentShip), keyboard controls, basic UI, and the initial tether/salvage collection loop using an Arcade Physics simulation. **The next step (Week 3) will focus on refining the game flow between scenes and hooking up the React UI to display game state information like the score.** 
