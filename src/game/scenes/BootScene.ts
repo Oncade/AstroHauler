@@ -6,7 +6,9 @@ export default class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // Optional: Load minimal assets needed for the PreloaderScene itself
+        // Load assets needed for the PreloaderScene display
+        this.load.image('bootBackground', 'assets/bg.png');
+        this.load.image('bootLogo', 'assets/logo.png');
         // console.log('BootScene preload');
     }
 

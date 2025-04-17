@@ -111,7 +111,7 @@ export default class GameScene extends Phaser.Scene {
             // fixedWidth: 300 // Optional for alignment
         }).setScrollFactor(0); // Keep UI fixed on screen
 
-        const exitButton = this.add.text(width - 16, 16, '[ Exit ]', {
+        const exitButton = this.add.text(width - 200, 100, '[ Exit ]', {
             fontSize: '24px',
             color: '#ff0000',
             backgroundColor: '#555555',

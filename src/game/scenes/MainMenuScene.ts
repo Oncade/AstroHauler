@@ -10,21 +10,19 @@ export default class MainMenuScene extends Phaser.Scene {
         console.log('MainMenuScene create');
         const { width, height } = this.scale;
 
-        // Background color (can be replaced with image later)
-        this.cameras.main.setBackgroundColor('#000030');
+        // Add background and logo first
+        this.add.image(width / 2, height / 2, 'bootBackground');
+        const logo = this.add.image(width / 2, height - 75, 'bootLogo') // Positioned 50px from bottom
+            .setOrigin(0.5, 1) // Set origin to bottom-center
+            .setScale(0.4); // Scale it down
 
-        // Title
-        this.add.text(width * 0.5, height * 0.3, 'AstroHauler', {
-            font: 'bold 64px Arial',
-            color: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
+
 
         // Start Button (Text placeholder)
-        const startButton = this.add.text(width * 0.5, height * 0.6, '[ Start Game ]', {
-            font: '32px Arial',
+        const startButton = this.add.text(width * 0.61, height * 0.48, '[ Start Game ]', {
+            font: '64px Arial',
             color: '#ffff00',
-            backgroundColor: '#555555',
+            //backgroundColor: '#555555',
             padding: { left: 15, right: 15, top: 10, bottom: 10 }
         })
         .setOrigin(0.5)
@@ -36,11 +34,11 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         startButton.on('pointerover', () => {
-            startButton.setStyle({ color: '#000000', backgroundColor: '#ffff00' });
+            startButton.setStyle({ color: '#000000' });
         });
 
         startButton.on('pointerout', () => {
-            startButton.setStyle({ color: '#ffff00', backgroundColor: '#555555' });
+            startButton.setStyle({ color: '#ffff00' });
         });
 
         // Emit the ready event for React bridge

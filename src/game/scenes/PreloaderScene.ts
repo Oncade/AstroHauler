@@ -7,9 +7,16 @@ export default class PreloaderScene extends Phaser.Scene {
     }
 
     preload() {
-        // Display a loading indicator (optional)
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+
+        // Add background and logo first
+        this.add.image(width / 2, height / 2, 'bootBackground');
+        const logo = this.add.image(width / 2, height - 50, 'bootLogo') // Positioned 50px from bottom
+            .setOrigin(0.5, 1) // Set origin to bottom-center
+            .setScale(0.4); // Scale it down
+
+        // Display a loading indicator (optional)
         const progressBar = this.add.graphics();
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);

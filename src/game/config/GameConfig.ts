@@ -3,8 +3,8 @@ import Phaser from 'phaser';
 // Define configuration constants
 export const GameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: 1024,
-    height: 768,
+    width: 1920,
+    height: 1080,
     parent: 'game-container', // Matches the div id in PhaserGame.tsx
     backgroundColor: '#000010', // Darker space background
     physics: {
