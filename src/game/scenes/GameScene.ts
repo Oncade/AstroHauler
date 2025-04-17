@@ -9,6 +9,7 @@ import {
     ControlKeys,
     SalvageConfig,
     getRandomSalvageMass,
+    getRandomSalvageTexture,
     ParentShipConfig,
     BackgroundConfig
 } from '../config/GameConfig';
@@ -26,14 +27,6 @@ export default class GameScene extends Phaser.Scene {
 
     constructor() {
         super('GameScene');
-    }
-
-    preload() {
-        // Load assets if not already loaded in PreloaderScene
-        this.load.image('salvage_placeholder', 'assets/images/salvage_placeholder.png'); // Example placeholder
-        this.load.image('parent_ship_placeholder', 'assets/images/parent_ship_placeholder.png'); // Example placeholder
-        this.load.image(BackgroundConfig.textureKey, BackgroundConfig.imagePath); // <-- Load starfield
-        console.log('GameScene preload: Placeholders loaded');
     }
 
     create() {
@@ -64,10 +57,11 @@ export default class GameScene extends Phaser.Scene {
 
         // Spawn initial salvage items
         for (let i = 0; i < SalvageConfig.spawnCount; i++) {
-            const x = Phaser.Math.Between(50, width * 1.5 - 50);
-            const y = Phaser.Math.Between(50, height * 1.5 - 50);
+            const x = Phaser.Math.Between(50, worldWidth - 50);
+            const y = Phaser.Math.Between(50, worldHeight - 50);
             const mass = getRandomSalvageMass();
-            const salvageItem = new Salvage(this, x, y, mass, 'salvage_placeholder');
+            const textureKey = getRandomSalvageTexture();
+            const salvageItem = new Salvage(this, x, y, mass, textureKey);
             this.salvageGroup.add(salvageItem, true);
         }
 

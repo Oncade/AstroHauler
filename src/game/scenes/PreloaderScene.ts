@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { EventBus } from '../EventBus';
+import { BackgroundConfig } from '../config/GameConfig';
 
 export default class PreloaderScene extends Phaser.Scene {
     constructor() {
@@ -62,7 +63,14 @@ export default class PreloaderScene extends Phaser.Scene {
 
         // Load assets
         console.log('PreloaderScene preload');
-        this.load.image('ship_placeholder', 'assets/images/ship_placeholder.png');
+        this.load.image('ship', 'assets/images/ship.png');
+        this.load.image('parent_ship', 'assets/images/parent_ship.png');
+        this.load.image(BackgroundConfig.textureKey, BackgroundConfig.imagePath); // Starfield
+
+        // Load all salvage variants
+        for (let i = 1; i <= 7; i++) {
+            this.load.image(`salvage_${i}`, `assets/images/salvage_${i}.png`);
+        }
 
         // Placeholder for audio assets (Week 4)
         // this.load.audio('thruster', 'assets/audio/thruster.wav');

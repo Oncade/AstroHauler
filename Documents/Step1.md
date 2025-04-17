@@ -11,7 +11,7 @@ Following the Phaser-React-TypeScript template structure:
 ```
 public/                     # Static assets
 ├── assets/
-│   ├── images/             # Game sprites and UI elements (ship_placeholder.png, salvage_placeholder.png, parent_ship_placeholder.png added)
+│   ├── images/             # Game sprites and UI elements (ship.png, parent_ship.png, salvage_1.png to salvage_7.png, Starfield.png added)
 │   └── audio/              # Sound effects and music (placeholder)
 └── index.html              # Main HTML file
 src/
@@ -113,11 +113,11 @@ src/
 ## Asset Requirements (Minimum Viable Product - Phase 1, Week 1 & 2 Focus)
 
 ### Graphics
-- [X] Player ship sprite (Placeholder created: `ship_placeholder.png`)*(Update - asset added as:'ship.png')*
-- [X] Parent ship sprite *(Placeholder created: `parent_ship_placeholder.png`)* *(Update - asset added as:'parent_ship.png')*
-- [X] 1 salvage item sprite *(Placeholder created: `salvage_placeholder.png`, mass indicated by alpha)* *(Update - asset added as:'salvage.png')*
-- [ ] 3-5 different salvage item sprites *(Deferred - need more assets)*
-- [X] Simple space background *(Update - asset added as: 'Starfield.png')*
+- [X] Player ship sprite (`ship.png`)
+- [X] Parent ship sprite (`parent_ship.png`)
+- [X] 1 salvage item sprite (`salvage_1.png`)
+- [X] 3-5 different salvage item sprites *(Updated with 7 assets: `salvage_1.png` - `salvage_7.png`)*
+- [X] Simple space background (`Starfield.png`)
 - [X] UI elements (buttons, score display, etc.) *(Text-based placeholders implemented)*
 
 ### Audio
@@ -135,12 +135,12 @@ src/
 - [X] Create project structure following the template
 - [X] Set up game scenes architecture
 - [X] Implement basic ship movement with physics *(Player class and physics properties set up)*
-- [X] Create placeholder assets for development *(Ship placeholder PNG created)*
+- [X] Create placeholder assets for development *(Initial placeholders replaced with first assets)*
 
 ### Week 2: Player Controls, Tether & Salvage Mechanics (Completed)
 - [X] **Implement player controls (Keyboard essential)** *(WASD implemented in GameScene)*
 - [X] Implement the tether system physics (initial version) *(Arcade physics spring/damping simulation in Tether.ts)*
-- [X] Create salvage items with different properties *(Salvage class with mass, value, alpha)*
+- [X] Create salvage items with different properties *(Salvage class with mass, value, alpha, and now uses multiple textures `salvage_1` to `salvage_7`)*
 - [X] Implement collision detection between ship and salvage (for tether attachment) *(Overlap check added in GameScene)*
 - [X] Create parent ship object *(ParentShip class created and added to GameScene)*
 - [X] Implement salvage deposit mechanics (collision/overlap with parent ship) *(Overlap check and deposit logic added in GameScene)*

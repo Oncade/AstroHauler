@@ -7,7 +7,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     public tetheredObject: Salvage | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'ship_placeholder');
+        super(scene, x, y, 'ship');
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
