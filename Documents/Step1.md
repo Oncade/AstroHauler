@@ -47,7 +47,7 @@ src/
 ### 1. Ship Movement and Physics Setup
 
 - Implement player ship with Phaser's Arcade Physics **(Done - Player class created)**
-- Create responsive controls for keyboard, mouse, and touch inputs **(Pending - Phase 2)**
+- Create responsive controls for keyboard, mouse, and touch inputs **(Moved to Week 2)**
 - Simulate low-gravity, inertia-driven movement **(Done - Via Player physics properties)**
 - Add ship sprites with proper animations for thrusting and rotation **(Done - Placeholder sprite added, animations pending assets)**
 
@@ -86,7 +86,7 @@ src/
 
 ### Gameplay Scene
 
-- [X] Player ship controls *(Setup in Player class, input handling pending)*
+- [X] Player ship controls *(Setup in Player class, input handling moved to Week 2)*
 - [X] Simple level with scattered salvage items *(Level setup basic, items pending Week 2)*
 - [X] Parent ship as deposit point *(Object pending Week 2)*
 - [X] Basic physics and tether mechanics *(Physics setup done, tether mechanics pending Week 2)*
@@ -125,7 +125,9 @@ src/
 - [ ] Salvage deposit sound *(Deferred)*
 - [ ] Background music loop *(Deferred)*
 
-## Implementation Tasks and Timeline
+## Implementation Tasks and Timeline *(Revised)*
+
+**Note:** Player controls have been moved to the start of Week 2 to prioritize basic playability.
 
 ### Week 1: Project Setup and Basic Movement (Completed)
 - [X] Create project structure following the template
@@ -133,23 +135,26 @@ src/
 - [X] Implement basic ship movement with physics *(Player class and physics properties set up)*
 - [X] Create placeholder assets for development *(Ship placeholder PNG created)*
 
-### Week 2: Tether Mechanics and Salvage
-- [ ] Implement the tether system physics
+### Week 2: Player Controls, Tether & Salvage Mechanics
+- [ ] **Implement player controls (Keyboard essential)** *(Moved from Week 3)*
+- [ ] Implement the tether system physics (initial version)
 - [ ] Create salvage items with different properties
-- [ ] Implement collision detection between ship and salvage
-- [ ] Create parent ship and deposit mechanics
+- [ ] Implement collision detection between ship and salvage (for tether attachment)
+- [ ] Create parent ship object
+- [ ] Implement salvage deposit mechanics (collision/overlap with parent ship)
 
-### Week 3: Game Flow Refinement, Controls & UI
-- [ ] Implement main menu, gameplay, and game over scenes *(Refine existing placeholders)*
-- [ ] Create/Refine React components for UI overlays
-- [ ] Implement EventBus communication for UI updates (Score, etc.)
-- [ ] Implement player controls (Keyboard essential, Mouse/Touch optional for Phase 1/2)
-- [ ] Add exit button and menu navigation *(Basic exit implemented)*
+### Week 3: Game Flow Refinement & UI Hookup
+- [ ] Refine main menu, gameplay, and game over scene interactions
+- [ ] Create/Refine React components for UI overlays (e.g., score display)
+- [ ] Implement EventBus communication for UI updates (Score, game over state)
+- [ ] Add exit button functionality and basic menu navigation
+- [ ] Implement basic scoring logic based on deposited salvage
 
 ### Week 4: Polishing and Testing
-- [ ] Refine physics and movement feel
+- [ ] Refine physics and movement feel (based on playtesting)
+- [ ] Refine tether mechanics (based on playtesting)
 - [ ] Integrate final placeholder art and sound *(If available)*
-- [ ] Test on different devices and input methods
+- [ ] Test on different devices and input methods (focus on keyboard for Phase 1)
 - [ ] Fix bugs and optimize performance
 
 ## Technical Considerations
@@ -160,13 +165,13 @@ src/
 - [ ] Handle mass and inertia calculations for realistic movement *(Basic drag/mass concepts introduced)*
 
 ### Input Handling
-- [ ] Create adaptable control scheme that works across devices *(Pending Phase 2)*
-- [ ] Implement touch controls that mirror keyboard/mouse functionality *(Pending Phase 2)*
-- [ ] Use EventBus to communicate input changes between React and Phaser *(Optional, depending on control implementation)*
+- [X] Create adaptable control scheme that works across devices *(Keyboard implemented Week 2)*
+- [ ] Implement touch controls that mirror keyboard/mouse functionality *(Deferred to Phase 2)*
+- [ ] Use EventBus to communicate input changes between React and Phaser *(Optional, currently handling input directly in GameScene)*
 
 ### Performance Optimization
 - [ ] Limit particle effects and complex physics calculations *(Ongoing consideration)*
-- [ ] Implement object pooling for frequently created/destroyed objects *(Consider for Salvage in Week 2/3)*
+- [ ] Implement object pooling for frequently created/destroyed objects *(Consider for Salvage)*
 - [ ] Ensure responsive design works on various screen sizes *(Basic setup, needs testing)*
 
 ## Next Steps After Phase 1
@@ -179,4 +184,4 @@ src/
 
 ## Conclusion
 
-This implementation plan provides a roadmap for developing Phase 1 of AstroHauler, focusing on the core mechanics and game flow. **Week 1 tasks are complete**, establishing the project structure, basic scenes, and the player object with initial physics. The next steps involve implementing the core tether and salvage mechanics in Week 2. 
+This implementation plan provides a roadmap for developing Phase 1 of AstroHauler, focusing on the core mechanics and game flow. Week 1 tasks are complete, establishing the project structure, basic scenes, and the player object with initial physics. **The next step (Week 2) will prioritize implementing basic keyboard controls** before moving on to the core tether and salvage mechanics. 
