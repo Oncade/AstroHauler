@@ -33,6 +33,9 @@ export default class GameScene extends Phaser.Scene {
         console.log('GameScene create');
         const { width, height } = this.scale;
 
+        // Reset score on scene start
+        this.score = 0;
+
         // Set world bounds (adjust size if needed)
         const worldWidth = width * 1.5;
         const worldHeight = height * 1.5;
@@ -109,6 +112,9 @@ export default class GameScene extends Phaser.Scene {
             // fixedWidth: 300 // Optional for alignment
         }).setScrollFactor(0); // Keep UI fixed on screen
 
+        // Update Phaser score text after reset
+        this.scoreText.setText('Score: ' + this.score);
+
         const exitButton = this.add.text(width - 200, 100, '[ Exit ]', {
             fontSize: '24px',
             color: '#ff0000',
@@ -161,10 +167,11 @@ export default class GameScene extends Phaser.Scene {
             this.activeTether.update(delta);
         }
 
-        // --- Game Over Condition Placeholder ---
-        // if (someCondition) {
-        //     this.scene.start('GameOverScene', { score: this.score });
-        // }
+        // --- Game Over Condition ---
+        if (this.score >= 100) { // Simple game over condition: score reaches 100
+            console.log('Game Over condition met. Starting GameOverScene.');
+            this.scene.start('GameOverScene', { score: this.score });
+        }
     }
 
     // --- Collision Handlers ---

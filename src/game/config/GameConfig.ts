@@ -39,7 +39,7 @@ export const ControlKeys = {
 // Tether Config
 export const TetherConfig = {
     maxLength: 50,        // Maximum distance before tether pulls
-    minLength: 20,         // Minimum distance (less important for simple spring)
+    minLength: 10,         // Minimum distance (less important for simple spring)
     springConstant: 0.02,  // How strong the pull is (adjust for feel)
     damping: 0.01,         // How much the spring force is dampened (prevents oscillation)
     lineColor: 0x00ffff,   // Cyan color for the tether line

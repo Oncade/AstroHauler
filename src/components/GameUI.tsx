@@ -8,22 +8,21 @@ interface GameUIProps {
 }
 
 export const GameUI: React.FC<GameUIProps> = ({ score }) => {
-    console.log('React GameUI component rendered (placeholder)');
+    console.log('React GameUI component rendered with score:', score);
     // This component overlays the Phaser GameScene to display HUD elements
     return (
         <div style={{
             position: 'absolute',
             top: '10px',
             left: '10px',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
             color: 'white',
+            padding: '10px 20px',
+            borderRadius: '5px',
             fontFamily: 'Arial, sans-serif',
-            fontSize: '24px',
-            textShadow: '1px 1px 2px black' // Make text more readable
+            fontSize: '24px'
         }}>
-            <div>Score: {score}</div>
-            {/* Add other HUD elements here later */}
-            {/* <div>Health: 100%</div> */}
-            {/* <div>Tether Status: Idle</div> */}
+            Score: {score}
         </div>
     );
 }; 

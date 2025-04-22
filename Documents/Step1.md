@@ -146,11 +146,11 @@ src/
 - [X] Implement salvage deposit mechanics (collision/overlap with parent ship) *(Overlap check and deposit logic added in GameScene)*
 
 ### Week 3: Game Flow Refinement & UI Hookup
-- [ ] Refine main menu, gameplay, and game over scene interactions
-- [ ] Create/Refine React components for UI overlays (e.g., score display using `score-updated` event)
-- [ ] Implement EventBus communication for UI updates (Game over state, etc.)
-- [ ] Add exit button functionality and basic menu navigation *(Exit button exists, ensure robust)*
-- [ ] Implement basic scoring logic based on deposited salvage *(Base logic done, refine if needed)*
+- [X] Refine main menu, gameplay, and game over scene interactions *(Scene transitions verified: MainMenu -> GameScene (Start), GameScene -> MainMenuScene (Exit), GameScene -> GameOverScene (Score >= 100), GameOverScene -> GameScene (Restart), GameOverScene -> MainMenuScene (Menu))*
+- [X] Create/Refine React components for UI overlays (e.g., score display using `score-updated` event) *(Implemented GameUI.tsx component driven by React state updated via 'score-updated' event from GameScene)*
+- [X] Implement EventBus communication for UI updates (Game over state, etc.) *(Simplified: React listens for 'score-updated'. Game over state implicitly handled by scene change detected via 'current-scene-ready' in App.tsx. Phaser scenes handle their own transitions.)*
+- [X] Add exit button functionality and basic menu navigation *(Exit button in GameScene confirmed functional. Start/Restart/Menu buttons in respective scenes confirmed functional.)*
+- [X] Implement basic scoring logic based on deposited salvage *(Base logic confirmed done in Week 2, score reset added to GameScene create)*
 
 ### Week 4: Polishing and Testing
 - [ ] Refine physics and movement feel (based on playtesting)
