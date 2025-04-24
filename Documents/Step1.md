@@ -28,7 +28,7 @@ src/
 │   ├── config/
 │   │   └── GameConfig.ts   # Game configuration constants (created, expanded)
 │   ├── objects/
-│   │   ├── Player.ts       # Player ship class (created with physics, tether state added)
+│   │   ├── Player.ts       # Player ship class (created with physics, tether state added, range indicator added)
 │   │   ├── Salvage.ts      # Salvage item class (implemented with mass, value, tether state)
 │   │   ├── ParentShip.ts   # Parent ship class (implemented as static deposit point)
 │   │   └── Tether.ts       # Tether physics system (implemented with Arcade physics simulation)
@@ -36,11 +36,11 @@ src/
 │       ├── BootScene.ts      # Initial loading scene (created)
 │       ├── PreloaderScene.ts # Asset preloading (created with placeholder assets)
 │       ├── MainMenuScene.ts  # Main menu scene (created with placeholders)
-│       ├── GameScene.ts      # Main gameplay scene (updated with controls, spawning, collisions, tether logic)
+│       ├── GameScene.ts      # Main gameplay scene (updated with controls, spawning, collisions, key-press tether logic)
 │       └── GameOverScene.ts  # Game over scene (created with placeholders)
 └── vite-env.d.ts           # Vite TypeScript declarations
 ```
-*(Structure mostly follows the plan, relevant files implemented/updated for Weeks 1 & 2)*
+*(Structure mostly follows the plan, relevant files implemented/updated for Weeks 1 & 2, Tether activation changed)*
 
 ## Core Mechanics Implementation
 
@@ -54,6 +54,8 @@ src/
 ### 2. Tether System
 
 - Create a physics-based tether connecting player ship to salvage **(Done - Week 2, Arcade physics simulation implemented in Tether class)**
+- **(New)** Activate tether via key press ('t') when near salvage within a configurable range.
+- **(New)** Display a visual indicator around the player showing the maximum tether attachment range.
 - Implement realistic swing and momentum for tethered objects **(Partial - Week 2, Basic spring/damping forces added; full realism likely needs refinement/Matter.js)**
 - Visualize tether as a line with proper tension representation **(Done - Week 2, Line drawn via Graphics, tension not visually represented yet)**
 - Handle collision detection between tethered salvage and environment **(Partial - Week 2, Salvage collides with world/other salvage, explicit tether collision not implemented)**
@@ -61,7 +63,7 @@ src/
 ### 3. Salvage Collection
 
 - Create basic salvage item types with different mass properties **(Done - Week 2, Salvage class implemented with mass, value, and visual alpha cue)**
-- Implement collision detection for attaching salvage to player ship **(Done - Week 2, Overlap check in GameScene initiates Tether)**
+- Implement logic for attaching salvage to player ship **(Done - Tether initiated via key press 't' when near salvage)**
 - Create the parent ship as a deposit point for collected salvage **(Done - Week 2, ParentShip class implemented and placed in GameScene)**
 - Implement a simple scoring system based on deposited salvage **(Done - Week 2, Score updated on deposit in GameScene)**
 
@@ -87,6 +89,7 @@ src/
 ### Gameplay Scene
 
 - [X] Player ship controls *(Keyboard WASD implemented Week 2 via GameScene)*
+- [X] **(New)** Tether activation/release control *(Keyboard 't' implemented)*
 - [X] Simple level with scattered salvage items *(Random spawning implemented Week 2)*
 - [X] Parent ship as deposit point *(Implemented Week 2)*
 - [X] Basic physics and tether mechanics *(Arcade physics simulation implemented Week 2)*
@@ -137,24 +140,24 @@ src/
 - [X] Implement basic ship movement with physics *(Player class and physics properties set up)*
 - [X] Create placeholder assets for development *(Initial placeholders replaced with first assets)*
 
-### Week 2: Player Controls, Tether & Salvage Mechanics (Completed)
-- [X] **Implement player controls (Keyboard essential)** *(WASD implemented in GameScene)*
+### Week 2: Player Controls, Tether & Salvage Mechanics (Completed, Tether Revised)
+- [X] Implement player controls (Keyboard essential - WASD) *(WASD implemented in GameScene)*
 - [X] Implement the tether system physics (initial version) *(Arcade physics spring/damping simulation in Tether.ts)*
+- [X] **(Revised)** Implement tether activation via key press ('t') with range limit and visual indicator.
 - [X] Create salvage items with different properties *(Salvage class with mass, value, alpha, and now uses multiple textures `salvage_1` to `salvage_7`)*
-- [X] Implement collision detection between ship and salvage (for tether attachment) *(Overlap check added in GameScene)*
 - [X] Create parent ship object *(ParentShip class created and added to GameScene)*
-- [X] Implement salvage deposit mechanics (collision/overlap with parent ship) *(Overlap check and deposit logic added in GameScene)*
+- [X] Implement salvage deposit mechanics (overlap with parent ship) *(Overlap check and deposit logic added in GameScene)*
 
 ### Week 3: Game Flow Refinement & UI Hookup
-- [X] Refine main menu, gameplay, and game over scene interactions *(Scene transitions verified: MainMenu -> GameScene (Start), GameScene -> MainMenuScene (Exit), GameScene -> GameOverScene (Score >= 100), GameOverScene -> GameScene (Restart), GameOverScene -> MainMenuScene (Menu))*
-- [X] Create/Refine React components for UI overlays (e.g., score display using `score-updated` event) *(Implemented GameUI.tsx component driven by React state updated via 'score-updated' event from GameScene)*
-- [X] Implement EventBus communication for UI updates (Game over state, etc.) *(Simplified: React listens for 'score-updated'. Game over state implicitly handled by scene change detected via 'current-scene-ready' in App.tsx. Phaser scenes handle their own transitions.)*
-- [X] Add exit button functionality and basic menu navigation *(Exit button in GameScene confirmed functional. Start/Restart/Menu buttons in respective scenes confirmed functional.)*
-- [X] Implement basic scoring logic based on deposited salvage *(Base logic confirmed done in Week 2, score reset added to GameScene create)*
+- [X] Refine main menu, gameplay, and game over scene interactions *(Scene transitions verified)*
+- [X] Create/Refine React components for UI overlays *(Implemented GameUI.tsx)*
+- [X] Implement EventBus communication for UI updates *(Implemented for score)*
+- [X] Add exit button functionality and basic menu navigation *(Confirmed functional)*
+- [X] Implement basic scoring logic based on deposited salvage *(Confirmed functional)*
 
 ### Week 4: Polishing and Testing
 - [ ] Refine physics and movement feel (based on playtesting)
-- [ ] Refine tether mechanics (adjust spring/damping constants in `GameConfig.ts`, based on playtesting)
+- [ ] Refine tether mechanics (adjust spring/damping constants in `GameConfig.ts`, test attach/detach feel)
 - [ ] Integrate final placeholder art and sound *(If available)*
 - [ ] Test on different devices and input methods (focus on keyboard for Phase 1)
 - [ ] Fix bugs and optimize performance (consider object pooling for salvage later)
@@ -167,7 +170,7 @@ src/
 - [X] Handle mass and inertia calculations for realistic movement *(Basic mass/drag/force concepts implemented)*
 
 ### Input Handling
-- [X] Create adaptable control scheme that works across devices *(Keyboard implemented Week 2 via config)*
+- [X] Create adaptable control scheme that works across devices *(Keyboard WASD + T implemented Week 2/3 via config)*
 - [ ] Implement touch controls that mirror keyboard/mouse functionality *(Deferred to Phase 2)*
 - [X] Use EventBus to communicate input changes between React and Phaser *(Input handled in GameScene, EventBus used for score updates)*
 
@@ -186,4 +189,4 @@ src/
 
 ## Conclusion
 
-This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects (Player, Salvage, ParentShip), keyboard controls, basic UI, and the initial tether/salvage collection loop using an Arcade Physics simulation. **The next step (Week 3) will focus on refining the game flow between scenes and hooking up the React UI to display game state information like the score.** 
+This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects, keyboard controls, basic UI, and the initial salvage collection loop. **The tether system has been updated to use a key press ('t') for activation/deactivation, targeting the nearest salvage within a configurable range, which is now visually indicated.** The next step (Week 3 focus) involves refining the game flow between scenes and hooking up the React UI to display game state information like the score (partially done). Week 4 focuses on polishing and testing. 

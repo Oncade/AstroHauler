@@ -11,7 +11,8 @@ import {
     getRandomSalvageMass,
     getRandomSalvageTexture,
     ParentShipConfig,
-    BackgroundConfig
+    BackgroundConfig,
+    TetherConfig
 } from '../config/GameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -74,6 +75,7 @@ export default class GameScene extends Phaser.Scene {
                 thrust: ControlKeys.thrust,
                 left: ControlKeys.rotateLeft,
                 right: ControlKeys.rotateRight,
+                tether: ControlKeys.tether
             }) as { [key: string]: Phaser.Input.Keyboard.Key };
         } else {
             console.error("Keyboard plugin not available!");
@@ -86,15 +88,6 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.salvageGroup, this.parentShip); // Salvage bounces off parent ship (static)
         // Note: Player does *not* collide with Parent Ship by default, can add if needed
         // this.physics.add.collider(this.player, this.parentShip);
-
-        // Overlap for Tether Attachment
-        this.physics.add.overlap(
-            this.player,
-            this.salvageGroup,
-            this.handleShipSalvageCollision,
-            undefined,
-            this
-        );
 
         // Overlap for Salvage Deposit
         this.physics.add.overlap(
@@ -153,7 +146,20 @@ export default class GameScene extends Phaser.Scene {
             this.player.thrust();
         }
 
-        // --- Update Tether ---
+        // --- Handle Tether Key Press ---
+        if (Phaser.Input.Keyboard.JustDown(this.keys.tether)) {
+            if (this.activeTether) {
+                // If already tethered, release the tether
+                this.activeTether.destroy();
+                this.activeTether = null;
+                console.log('Scene: Tether released by key press.');
+            } else {
+                // If not tethered, try to attach to nearest salvage
+                this.attemptTetherAttach();
+            }
+        }
+
+        // --- Update Tether --- (Only if active)
         if (this.activeTether) {
             // Reset acceleration before applying tether forces each frame
             if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
@@ -170,29 +176,71 @@ export default class GameScene extends Phaser.Scene {
         // --- Game Over Condition ---
         if (this.score >= 100) { // Simple game over condition: score reaches 100
             console.log('Game Over condition met. Starting GameOverScene.');
+            if (this.activeTether) { // Clean up tether before changing scene
+                this.activeTether.destroy();
+                this.activeTether = null;
+            }
             this.scene.start('GameOverScene', { score: this.score });
         }
     }
 
-    // --- Collision Handlers ---
+    // --- Tether Attachment Logic ---
+    attemptTetherAttach() {
+        // Filter active, untethered salvage items that have Arcade bodies
+        const eligibleSalvage = this.salvageGroup.getChildren().filter(obj => {
+            const salvage = obj as Salvage; // Cast needed for accessing properties
+            return salvage.active &&
+                   !salvage.isTethered &&
+                   salvage.body instanceof Phaser.Physics.Arcade.Body; // Ensure body exists
+        });
 
-    handleShipSalvageCollision(object1: any, object2: any) {
-        // Determine which object is the player and which is salvage
-        const player = (object1 instanceof Player) ? object1 : (object2 instanceof Player) ? object2 : null;
-        const salvage = (object1 instanceof Salvage) ? object1 : (object2 instanceof Salvage) ? object2 : null;
-
-        // Ensure we have both and they have bodies
-        if (!player || !salvage || !player.body || !salvage.body) {
+        if (eligibleSalvage.length === 0) {
+            console.log('Scene: No eligible salvage (active, untethered, with body) found.');
             return;
         }
 
-        if (!player.isTethered && !salvage.isTethered) {
-            if (player.body instanceof Phaser.Physics.Arcade.Body) player.body.setAcceleration(0,0);
-            if (salvage.body instanceof Phaser.Physics.Arcade.Body) salvage.body.setAcceleration(0,0);
-            this.activeTether = new Tether(this, player, salvage);
-            console.log('Scene: Tether initiated.');
+        // Use physics.closest to find the nearest eligible salvage game object
+        // Note: physics.closest requires Game Objects or Sprites, not just bodies
+        const closestGameObject = this.physics.closest(this.player, eligibleSalvage);
+
+        if (!closestGameObject) {
+             console.log('Scene: physics.closest returned null.');
+             return; // Should not happen if eligibleSalvage is not empty, but good practice
+        }
+
+        // Cast the result back to Salvage
+        const closestSalvage = closestGameObject as Salvage;
+
+        // Check distance
+        const distanceSq = Phaser.Math.Distance.Squared(this.player.x, this.player.y, closestSalvage.x, closestSalvage.y);
+        const maxDistanceSq = TetherConfig.maxAttachDistance * TetherConfig.maxAttachDistance;
+
+        if (distanceSq <= maxDistanceSq) {
+            // Ensure bodies exist and reset acceleration before tethering
+            // Player body check
+            if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
+                this.player.body.setAcceleration(0, 0);
+            } else {
+                 console.warn('Scene: Player body missing during tether attempt.');
+                 return; // Cannot tether without player body
+            }
+
+            // Salvage body check (already checked in filter, but double-check for safety)
+            if (closestSalvage.body instanceof Phaser.Physics.Arcade.Body) {
+                closestSalvage.body.setAcceleration(0, 0);
+                this.activeTether = new Tether(this, this.player, closestSalvage);
+                console.log('Scene: Tether initiated by key press to nearest salvage.');
+            } else {
+                // This case should ideally not be reached due to the filter
+                console.warn('Scene: Closest salvage is missing Arcade Body despite filter.');
+            }
+        } else {
+            console.log('Scene: Nearest eligible salvage is out of range.');
+            // Optional: Play a failure sound/effect
         }
     }
+
+    // --- Collision Handlers ---
 
     // Process callback for deposit overlap
     checkDepositEligibility(object1: any, object2: any): boolean {

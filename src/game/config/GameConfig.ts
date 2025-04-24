@@ -7,11 +7,17 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     height: 1080,
     parent: 'game-container', // Matches the div id in PhaserGame.tsx
     backgroundColor: '#000010', // Darker space background
+    transparent: true,
+    scale: {
+        mode: Phaser.Scale.RESIZE,
+        width: window.innerWidth,
+        height: window.innerHeight
+    },
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { x: 0, y: 0 }, // No global gravity, ship handles its own
-            debug: true // Enable physics debugging for Phase 1
+            debug: false // Set to true for physics debugging visuals
         }
     },
     // Scene list will be added in main.ts
@@ -19,18 +25,20 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
 
 // Player Specific Config
 export const PlayerConfig = {
-    thrustForce: 175,
-    maxVelocity: 400,
-    angularVelocity: 200,
-    drag: 100, // Linear drag
-    angularDrag: 100, // Angular drag
+    thrustForce: 175,       // Increased force for more responsiveness
+    drag: 0.98,             // Air resistance / friction
+    angularDrag: 0.95,
+    angularVelocity: 150,   // Rotation speed
+    maxVelocity: 200,       // Maximum speed
+    textureKey: 'ship'
 };
 
 // Controls Config
 export const ControlKeys = {
-    thrust: 'W',
-    rotateLeft: 'A',
-    rotateRight: 'D',
+    thrust: Phaser.Input.Keyboard.KeyCodes.W,
+    rotateLeft: Phaser.Input.Keyboard.KeyCodes.A,
+    rotateRight: Phaser.Input.Keyboard.KeyCodes.D,
+    tether: Phaser.Input.Keyboard.KeyCodes.T, // Added tether key
     // Add strafe keys if needed later
     // strafeLeft: 'Q',
     // strafeRight: 'E',
@@ -38,12 +46,15 @@ export const ControlKeys = {
 
 // Tether Config
 export const TetherConfig = {
-    maxLength: 50,        // Maximum distance before tether pulls
-    minLength: 10,         // Minimum distance (less important for simple spring)
-    springConstant: 0.02,  // How strong the pull is (adjust for feel)
-    damping: 0.01,         // How much the spring force is dampened (prevents oscillation)
-    lineColor: 0x00ffff,   // Cyan color for the tether line
+    maxLength: 100,         // Maximum length before spring force applies (pixels)
+    minLength: 20,          // Minimum length (optional, less critical for this implementation)
+    springConstant: 1,   // Stiffness of the tether spring (k)
+    damping: 0.001,         // Damping factor to reduce oscillations (c)
     lineWidth: 2,
+    lineColor: 0x00ff00,     // Green tether line
+    maxAttachDistance: 150, // Max distance player can be from salvage to attach tether
+    attachRangeIndicatorColor: 0x00ff00, // Color of the visual range indicator
+    attachRangeIndicatorAlpha: 0.25,    // Alpha/transparency of the range indicator
 };
 
 // Background Config
