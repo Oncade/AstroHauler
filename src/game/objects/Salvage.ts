@@ -23,8 +23,8 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         this.setCollideWorldBounds(true);
         this.setBounce(0.4); // More bounce than player?
         this.setMass(this.mass); // Set physics mass
-        this.setDrag(SalvageConfig.baseDrag * this.mass); // Heavier items have more base drag
-        this.setAngularDrag(150 * this.mass); // Heavier items resist rotation more
+        this.setDrag(0); // No drag in space
+        this.setAngularDrag(0); // No angular drag in space
 
         // Tint based on mass (visual cue) - Simpler alpha approach
         const minAlpha = 0.5; // Min transparency for lightest items
@@ -40,17 +40,22 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
     startTether(player: Player) {
         this.isTethered = true;
         this.tetheredBy = player;
-        const newDrag = SalvageConfig.baseDrag * this.mass * SalvageConfig.tetheredDragMultiplier;
-        this.setDrag(newDrag);
-        console.log(`Salvage tethered by player. New drag: ${newDrag}`);
+        // Maintain zero drag for space physics
+        this.setDrag(0);
+        console.log(`Salvage tethered by player. Zero drag maintained for space physics.`);
     }
 
     // Called when tether is detached (e.g., deposited or broken)
     endTether() {
         this.isTethered = false;
         this.tetheredBy = null;
-        this.setDrag(SalvageConfig.baseDrag * this.mass);
-        console.log('Salvage tether ended.');
+        // Set drag to 0 to maintain momentum in space
+        this.setDrag(0);
+        // Reset acceleration to ensure no residual forces
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            this.body.setAcceleration(0, 0);
+        }
+        console.log('Salvage tether ended. Momentum maintained.');
     }
 
     // Override destroy to ensure endTether is called if needed

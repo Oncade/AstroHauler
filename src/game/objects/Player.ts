@@ -13,8 +13,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         // Physics properties from config
-        this.setDrag(PlayerConfig.drag);
-        this.setAngularDrag(PlayerConfig.angularDrag);
+        this.setDrag(PlayerConfig.drag); // Will be 0 from updated config
+        this.setAngularDrag(PlayerConfig.angularDrag); // Will be 0 from updated config
         this.setMaxVelocity(PlayerConfig.maxVelocity);
         this.setCollideWorldBounds(true);
         this.setBounce(0.2); // Keep bounce low
@@ -40,7 +40,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.isTethered = false;
         this.tetheredObject = null;
         this.rangeIndicator.setVisible(true); // Show indicator when not tethered
-        console.log('Player: Tether detached');
+        
+        // Set drag to 0 to maintain momentum in space
+        this.setDrag(0);
+        // Reset acceleration to ensure no residual forces
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            this.body.setAcceleration(0, 0);
+        }
+        
+        console.log('Player: Tether detached. Momentum maintained.');
     }
 
     // --- Movement Methods ---

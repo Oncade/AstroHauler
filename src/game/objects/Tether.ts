@@ -88,6 +88,16 @@ export default class Tether {
 
     destroy() {
         this.graphics.destroy();
+        
+        // Clear any lingering forces before detachment
+        if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
+            this.player.body.setAcceleration(0, 0);
+        }
+        
+        if (this.salvage.body instanceof Phaser.Physics.Arcade.Body) {
+            this.salvage.body.setAcceleration(0, 0);
+        }
+        
         // Ensure player and salvage know the tether is gone
         if (this.player.tetheredObject === this.salvage) {
             this.player.detachTether();
@@ -95,6 +105,6 @@ export default class Tether {
         if (this.salvage.tetheredBy === this.player) {
             this.salvage.endTether();
         }
-        console.log('Tether destroyed');
+        console.log('Tether destroyed - objects maintain their current velocity');
     }
 } 

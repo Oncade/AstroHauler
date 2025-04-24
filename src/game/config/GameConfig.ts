@@ -26,10 +26,10 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
 // Player Specific Config
 export const PlayerConfig = {
     thrustForce: 175,       // Increased force for more responsiveness
-    drag: 0.98,             // Air resistance / friction
-    angularDrag: 0.95,
+    drag: 0,                // No drag in space
+    angularDrag: 0,         // No angular drag in space
     angularVelocity: 150,   // Rotation speed
-    maxVelocity: 200,       // Maximum speed
+    maxVelocity: 400,       // Increased maximum speed for space
     textureKey: 'ship'
 };
 
@@ -70,8 +70,8 @@ export const SalvageConfig = {
     minMass: 0.5,
     maxMass: 3.0,
     spawnCount: 15, // Increased spawn count slightly
-    baseDrag: 50, // Drag when not tethered
-    tetheredDragMultiplier: 1.5, // Increase drag when tethered
+    baseDrag: 0, // No drag when not tethered (space physics)
+    tetheredDragMultiplier: 0, // No drag when tethered
     valuePerMass: 5, // Value based on mass
     textureKeys: [ // Array of available texture keys
         'salvage_1',
