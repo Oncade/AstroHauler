@@ -14,7 +14,8 @@ import {
     BackgroundConfig,
     TetherConfig,
     TouchControlsConfig,
-    DeviceDetection
+    DeviceDetection,
+    PlayerConfig
 } from '../config/GameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -33,9 +34,11 @@ export default class GameScene extends Phaser.Scene {
     private tetherButton!: Phaser.GameObjects.Image;
     private isTouching: boolean = false;
     private touchThrust: boolean = false;
-    private touchRotateLeft: boolean = false;
-    private touchRotateRight: boolean = false;
+    private targetRotation: number = 0; // Target rotation angle for the ship
     private isTouchDevice: boolean = false;
+    private joystickAngle: number = 0;
+    private joystickDistance: number = 0;
+    private touchDirectionIndicator!: Phaser.GameObjects.Graphics;
 
     constructor() {
         super('GameScene');
@@ -186,6 +189,11 @@ export default class GameScene extends Phaser.Scene {
                 .setScale(TouchControlsConfig.joystickSize * 0.6 / 100)  // Smaller inner stick
         };
         
+        // Create direction indicator for visualizing thrust direction
+        this.touchDirectionIndicator = this.add.graphics()
+            .setScrollFactor(0)
+            .setDepth(999);
+        
         // Create tether button with configured size
         this.tetherButton = this.add.image(buttonX, buttonY, 'tether-button')
             .setScrollFactor(0)
@@ -236,8 +244,8 @@ export default class GameScene extends Phaser.Scene {
             this.resetJoystick();
             this.isTouching = false;
             this.touchThrust = false;
-            this.touchRotateLeft = false;
-            this.touchRotateRight = false;
+            // Clear the direction indicator
+            this.touchDirectionIndicator.clear();
         });
     }
     
@@ -264,36 +272,67 @@ export default class GameScene extends Phaser.Scene {
             this.joystick.inner.x = joystickCenterX + normalizedX;
             this.joystick.inner.y = joystickCenterY + normalizedY;
             
-            // Convert angle to controls (thrust + rotation)
-            // Front/Back is thrust, Left/Right is rotation
-            const angleDegrees = angle * (180 / Math.PI);
+            // Store the joystick angle and distance for thrust calculations
+            this.joystickAngle = angle;
+            this.joystickDistance = limitedDistance / maxDistance; // Normalized 0-1
             
-            // Left-right is for rotation (consider the angle in a circle)
-            if (angleDegrees > -135 && angleDegrees < -45) {
-                // Top quadrant - thrust
-                this.touchThrust = true;
-                this.touchRotateLeft = false;
-                this.touchRotateRight = false;
-            } else if (angleDegrees >= -45 && angleDegrees < 45) {
-                // Right quadrant - rotate right
-                this.touchThrust = false;
-                this.touchRotateLeft = false;
-                this.touchRotateRight = true;
-            } else if (angleDegrees >= 45 && angleDegrees < 135) {
-                // Bottom quadrant - no thrust (or backward if implemented)
-                this.touchThrust = false;
-                this.touchRotateLeft = false;
-                this.touchRotateRight = false;
-            } else {
-                // Left quadrant - rotate left
-                this.touchThrust = false;
-                this.touchRotateLeft = true;
-                this.touchRotateRight = false;
-            }
+            // Set the target rotation for the ship (convert to match ship's coordinate system)
+            // Phaser uses a different angle system than standard math:
+            // 0 is to the right, PI/2 is down, PI is left, 3*PI/2 is up
+            // The ship sprite faces up at rotation 0, so we adjust by PI/2
+            this.targetRotation = angle + Math.PI/2;
+            
+            // Draw direction indicator
+            this.updateDirectionIndicator();
+            
+            // Always enable thrust when joystick is active
+            this.touchThrust = true;
         } else {
             // Center position - no input
             this.resetJoystick();
         }
+    }
+    
+    updateDirectionIndicator() {
+        // Clear previous drawing
+        this.touchDirectionIndicator.clear();
+        
+        // Don't draw if not actively using joystick
+        if (!this.isTouching || !this.touchThrust) return;
+        
+        // Calculate direction line endpoints
+        const startX = this.joystick.outer.x;
+        const startY = this.joystick.outer.y;
+        const length = TouchControlsConfig.joystickSize * 0.8; // Line length
+        const endX = startX + Math.cos(this.joystickAngle) * length;
+        const endY = startY + Math.sin(this.joystickAngle) * length;
+        
+        // Draw arrow to show thrust direction using config settings
+        this.touchDirectionIndicator.lineStyle(
+            TouchControlsConfig.directionIndicator.lineWidth, 
+            TouchControlsConfig.directionIndicator.color, 
+            TouchControlsConfig.directionIndicator.alpha
+        );
+        this.touchDirectionIndicator.beginPath();
+        this.touchDirectionIndicator.moveTo(startX, startY);
+        this.touchDirectionIndicator.lineTo(endX, endY);
+        
+        // Draw arrowhead
+        const arrowLength = TouchControlsConfig.directionIndicator.arrowSize;
+        const arrowAngle = Math.PI / 6; // 30 degrees
+        
+        const arrowLeftX = endX - arrowLength * Math.cos(this.joystickAngle + arrowAngle);
+        const arrowLeftY = endY - arrowLength * Math.sin(this.joystickAngle + arrowAngle);
+        
+        const arrowRightX = endX - arrowLength * Math.cos(this.joystickAngle - arrowAngle);
+        const arrowRightY = endY - arrowLength * Math.sin(this.joystickAngle - arrowAngle);
+        
+        this.touchDirectionIndicator.moveTo(endX, endY);
+        this.touchDirectionIndicator.lineTo(arrowLeftX, arrowLeftY);
+        this.touchDirectionIndicator.moveTo(endX, endY);
+        this.touchDirectionIndicator.lineTo(arrowRightX, arrowRightY);
+        
+        this.touchDirectionIndicator.strokePath();
     }
     
     resetJoystick() {
@@ -302,23 +341,41 @@ export default class GameScene extends Phaser.Scene {
             this.joystick.inner.y = this.joystick.outer.y;
         }
         this.touchThrust = false;
-        this.touchRotateLeft = false;
-        this.touchRotateRight = false;
+        this.joystickAngle = 0;
+        this.joystickDistance = 0;
+        
+        // Clear the direction indicator
+        if (this.touchDirectionIndicator) {
+            this.touchDirectionIndicator.clear();
+        }
     }
 
     update(time: number, delta: number) {
         // --- Handle Input ---
-        // Keyboard Controls
-        if (this.keys.left?.isDown || this.touchRotateLeft) {
-            this.player.moveLeft();
-        } else if (this.keys.right?.isDown || this.touchRotateRight) {
-            this.player.moveRight();
+        // Handle rotation differently for keyboard vs. touch
+        if (this.isTouchDevice && this.isTouching && this.touchThrust) {
+            // Touch controls - rotate ship to face the direction of joystick movement
+            this.rotateShipTowards(this.targetRotation, delta);
         } else {
-            this.player.stopRotation();
+            // Keyboard Controls for rotation
+            if (this.keys.left?.isDown) {
+                this.player.moveLeft();
+            } else if (this.keys.right?.isDown) {
+                this.player.moveRight();
+            } else {
+                this.player.stopRotation();
+            }
         }
 
-        if (this.keys.thrust?.isDown || this.touchThrust) {
+        // Handle thrust input differently for keyboard vs. touch
+        if (this.keys.thrust?.isDown) {
+            // Keyboard thrust - always in the direction the ship is facing
             this.player.thrust();
+        } else if (this.touchThrust && this.isTouching) {
+            // Touch thrust - apply in the direction of the joystick angle
+            // Since the ship will rotate to match this direction, we can just use thrust()
+            // Use the intensity of the joystick movement to modulate thrust force
+            this.player.thrustWithForce(this.joystickDistance * PlayerConfig.thrustForce);
         }
 
         // --- Handle Tether Key Press ---
@@ -364,6 +421,48 @@ export default class GameScene extends Phaser.Scene {
                 this.activeTether = null;
             }
             this.scene.start('GameOverScene', { score: this.score });
+        }
+    }
+    
+    // Helper method to smoothly rotate the ship towards a target angle
+    rotateShipTowards(targetAngle: number, delta: number) {
+        if (!this.player) return;
+        
+        // Normalize both angles to 0-2π for comparison
+        const currentAngle = Phaser.Math.Wrap(this.player.rotation, 0, Math.PI * 2);
+        targetAngle = Phaser.Math.Wrap(targetAngle, 0, Math.PI * 2);
+        
+        // Find the shortest rotation direction (clockwise or counterclockwise)
+        let angleDiff = targetAngle - currentAngle;
+        
+        // Adjust for shortest path (handle wrap-around)
+        if (angleDiff > Math.PI) {
+            angleDiff -= Math.PI * 2;
+        } else if (angleDiff < -Math.PI) {
+            angleDiff += Math.PI * 2;
+        }
+        
+        // Calculate rotation speed based on joystick distance
+        // Further from center = faster rotation
+        const rotationSpeed = PlayerConfig.angularVelocity * this.joystickDistance;
+        
+        // Convert delta to seconds for consistent motion
+        const dt = delta / 1000;
+        
+        // Calculate maximum angle change this frame
+        const maxRotation = rotationSpeed * dt;
+        
+        // Apply rotation based on the direction and limited by max speed
+        if (Math.abs(angleDiff) < maxRotation) {
+            // We can reach the target this frame
+            this.player.setRotation(targetAngle);
+            this.player.setAngularVelocity(0);
+        } else if (angleDiff > 0) {
+            // Rotate clockwise
+            this.player.setAngularVelocity(rotationSpeed);
+        } else {
+            // Rotate counterclockwise
+            this.player.setAngularVelocity(-rotationSpeed);
         }
     }
 

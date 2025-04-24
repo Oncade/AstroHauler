@@ -49,9 +49,9 @@ Once the server is running you can edit any of the files in the `src` folder. Vi
 The game automatically detects touch devices and displays touch controls:
 
 - **Virtual Joystick** - Located in the lower-left corner of the screen:
-  - Push up: Thrust forward
-  - Push left: Rotate left
-  - Push right: Rotate right
+  - Drag in any direction: Ship will automatically rotate to face and move in that direction
+  - Dragging further from center increases both rotation speed and thrust intensity
+  - A direction indicator arrow shows the thrust direction
 
 - **Tether Button** - Located in the lower-right corner of the screen:
   - Tap to toggle tether (attach/detach)

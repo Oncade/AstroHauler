@@ -106,6 +106,45 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             );
         }
     }
+    
+    // Apply variable thrust force in the direction the ship is facing
+    thrustWithForce(force: number) {
+        if (this.body?.velocity) {
+            this.scene.physics.velocityFromRotation(
+                this.rotation - Math.PI / 2, // Adjust for sprite orientation
+                force,
+                (this.body.velocity as Phaser.Math.Vector2)
+            );
+        }
+    }
+    
+    // New method for directional thrust based on touch input
+    thrustInDirection(angle: number) {
+        if (!this.body || !(this.body instanceof Phaser.Physics.Arcade.Body)) return;
+        
+        // Convert the joystick angle to world coordinates considering ship rotation
+        // This gives thrust relative to the player's current orientation
+        const thrustAngle = angle + this.rotation - Math.PI / 2;
+        
+        // Create a thrust vector based on the combined angle
+        const thrustVector = new Phaser.Math.Vector2();
+        
+        // Calculate thrust vector components
+        this.scene.physics.velocityFromRotation(
+            thrustAngle, 
+            PlayerConfig.thrustForce,
+            thrustVector
+        );
+        
+        // Apply thrust to the current velocity
+        this.body.velocity.add(thrustVector);
+        
+        // Ensure we don't exceed maximum velocity
+        const speed = this.body.velocity.length();
+        if (speed > PlayerConfig.maxVelocity) {
+            this.body.velocity.scale(PlayerConfig.maxVelocity / speed);
+        }
+    }
 
     moveLeft() {
         this.setAngularVelocity(-PlayerConfig.angularVelocity);

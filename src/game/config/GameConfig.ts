@@ -75,6 +75,12 @@ export const TouchControlsConfig = {
         normal: 0xffffff,       // Normal state color
         active: 0x00ff00,       // Active state color
         warning: 0xff0000       // Warning state color
+    },
+    directionIndicator: {
+        color: 0x00ffff,        // Color of the direction indicator
+        alpha: 0.7,             // Alpha/transparency of the direction indicator
+        lineWidth: 3,           // Width of the direction indicator line
+        arrowSize: 10           // Size of the arrowhead
     }
 };
 
