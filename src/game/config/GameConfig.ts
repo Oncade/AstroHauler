@@ -131,6 +131,8 @@ export const ParentShipConfig = {
     texture: 'parent_ship', // Use the actual asset key
     spawnX: typeof GameConfig.width === 'number' ? GameConfig.width * 0.1 : 1024 * 0.1, // Position near left edge
     spawnY: typeof GameConfig.height === 'number' ? GameConfig.height * 0.5 : 768 * 0.5, // Position vertically centered
+    depositZoneRadius: 600, // Visual radius for deposit zone indicator
+    depositZoneOffset: { x: 600, y: 0 } // Offset from parent ship center (positive x = right)
 };
 
 // --- Helper Functions ---

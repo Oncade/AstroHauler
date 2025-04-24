@@ -8,6 +8,7 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
     public value: number;
     public isTethered: boolean = false;
     public tetheredBy: Player | null = null;
+    private tetherIndicator: Phaser.GameObjects.Graphics;
 
     constructor(scene: Phaser.Scene, x: number, y: number, mass: number, texture: string | Phaser.Textures.Texture = 'salvage_placeholder') {
         super(scene, x, y, texture);
@@ -32,7 +33,11 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         const massRatio = Phaser.Math.Clamp((mass - SalvageConfig.minMass) / (SalvageConfig.maxMass - SalvageConfig.minMass), 0, 1);
         this.setAlpha(Phaser.Math.Linear(minAlpha, maxAlpha, massRatio));
         this.setTint(); // Clear any previous tint if needed
-
+        
+        // Create a tether indicator that will show when this salvage is tethered
+        this.tetherIndicator = scene.add.graphics();
+        this.tetherIndicator.setVisible(false);
+        
         console.log(`Salvage created at (${x}, ${y}) Mass: ${this.mass.toFixed(2)}, Value: ${this.value}`);
     }
 
@@ -42,7 +47,11 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         this.tetheredBy = player;
         // Maintain zero drag for space physics
         this.setDrag(0);
-        console.log(`Salvage tethered by player. Zero drag maintained for space physics.`);
+        
+        // Visual indicator for tethered state
+        this.showTetherIndicator();
+        
+        console.log(`Salvage ${this.texture.key} tethered by player at position (${this.x}, ${this.y})`);
     }
 
     // Called when tether is detached (e.g., deposited or broken)
@@ -55,7 +64,39 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         if (this.body instanceof Phaser.Physics.Arcade.Body) {
             this.body.setAcceleration(0, 0);
         }
-        console.log('Salvage tether ended. Momentum maintained.');
+        
+        // Hide the tether indicator
+        this.hideTetherIndicator();
+        
+        console.log(`Salvage ${this.texture.key} tether ended at position (${this.x}, ${this.y})`);
+    }
+    
+    // Show visual indication that this salvage is tethered
+    showTetherIndicator() {
+        this.tetherIndicator.clear();
+        this.tetherIndicator.lineStyle(2, 0x00ffff, 0.8);
+        this.tetherIndicator.strokeCircle(0, 0, this.width * 0.6);
+        this.tetherIndicator.setPosition(this.x, this.y);
+        this.tetherIndicator.setVisible(true);
+        
+        // Add a gentle pulse animation
+        if (this.scene) {
+            this.scene.tweens.add({
+                targets: this.tetherIndicator,
+                alpha: { from: 0.8, to: 0.3 },
+                duration: 1000,
+                yoyo: true,
+                repeat: -1
+            });
+        }
+    }
+    
+    // Hide the tether indicator
+    hideTetherIndicator() {
+        if (this.scene) {
+            this.scene.tweens.killTweensOf(this.tetherIndicator);
+        }
+        this.tetherIndicator.setVisible(false);
     }
 
     // Override destroy to ensure endTether is called if needed
@@ -63,13 +104,24 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         if (this.isTethered) {
             this.endTether();
         }
+        
+        // Clean up the tether indicator
+        if (this.tetherIndicator) {
+            this.tetherIndicator.destroy();
+        }
+        
         super.destroy(fromScene);
     }
 
-    // Add preUpdate if specific per-frame logic is needed for salvage
-    // preUpdate(time: number, delta: number) {
-    //     super.preUpdate(time, delta);
-    // }
+    // Update tether indicator position to follow salvage
+    preUpdate(time: number, delta: number) {
+        super.preUpdate(time, delta);
+        
+        // Update tether indicator position
+        if (this.tetherIndicator && this.isTethered) {
+            this.tetherIndicator.setPosition(this.x, this.y);
+        }
+    }
 
     // Add methods related to salvage interaction, tethering, etc.
     collect() {

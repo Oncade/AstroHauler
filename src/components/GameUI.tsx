@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Placeholder for the In-Game UI React Component
 
@@ -8,21 +8,150 @@ interface GameUIProps {
 }
 
 export const GameUI: React.FC<GameUIProps> = ({ score }) => {
+    const [showHelp, setShowHelp] = useState(true);
+    const [showInstructions, setShowInstructions] = useState(false);
+    
+    // Auto-hide the help message after 15 seconds
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowHelp(false);
+        }, 15000);
+        
+        return () => clearTimeout(timer);
+    }, []);
+    
     console.log('React GameUI component rendered with score:', score);
-    // This component overlays the Phaser GameScene to display HUD elements
+    
     return (
-        <div style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '24px'
-        }}>
-            Score: {score}
+        <div>
+            {/* Score Display */}
+            <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '5px',
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '24px'
+            }}>
+                SpaceBucks: {score}
+            </div>
+            
+            {/* Instructions Button */}
+            <div 
+                style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    color: '#00ff00',
+                    padding: '5px 15px',
+                    borderRadius: '5px',
+                    fontFamily: 'Arial, sans-serif',
+                    cursor: 'pointer',
+                    border: '1px solid #00ff00',
+                    fontSize: '16px'
+                }}
+                onClick={() => setShowInstructions(!showInstructions)}
+            >
+                {showInstructions ? 'Hide Instructions' : 'Show Instructions'}
+            </div>
+            
+            {/* Detailed Instructions Panel */}
+            {showInstructions && (
+                <div style={{
+                    position: 'absolute',
+                    top: '50px',
+                    right: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    color: 'white',
+                    padding: '15px',
+                    borderRadius: '5px',
+                    fontFamily: 'Arial, sans-serif',
+                    maxWidth: '400px',
+                    fontSize: '16px',
+                    border: '1px solid #00ff00',
+                    zIndex: 1000
+                }}>
+                    <h3 style={{ color: '#00ff00', marginTop: 0 }}>Game Instructions</h3>
+                    
+                    <h4 style={{ color: '#ffff00', marginBottom: '5px' }}>Controls:</h4>
+                    <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
+                        <li>W/Up - Thrust forward</li>
+                        <li>A/D or Left/Right - Rotate ship</li>
+                        <li>T - Tether/Release salvage</li>
+                    </ul>
+                    
+                    <h4 style={{ color: '#ffff00', marginBottom: '5px' }}>How to Collect SpaceBucks:</h4>
+                    <ol style={{ marginTop: '5px', paddingLeft: '20px' }}>
+                        <li>Press <b>T</b> to tether the nearest salvage</li>
+                        <li>Drag the tethered salvage to the <span style={{ color: '#00ff00' }}>GREEN DEPOSIT ZONE</span></li>
+                        <li><b>Move salvage directly into the center</b> of the deposit zone</li>
+                        <li>Keep the salvage inside the zone until you see <span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span></li>
+                    </ol>
+                    
+                    <div style={{ borderTop: '1px solid #444', marginTop: '10px', paddingTop: '10px' }}>
+                        <p style={{ color: '#ff9900', margin: 0 }}>Tip: The deposit zone will turn yellow when salvage can be deposited!</p>
+                    </div>
+                    
+                    <button 
+                        onClick={() => setShowInstructions(false)}
+                        style={{
+                            marginTop: '10px',
+                            backgroundColor: '#333',
+                            color: 'white',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Close
+                    </button>
+                </div>
+            )}
+            
+            {/* Initial Help Text */}
+            {showHelp && (
+                <div style={{
+                    position: 'absolute',
+                    top: '80px',
+                    left: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: '#00ff00',
+                    padding: '15px',
+                    borderRadius: '5px',
+                    fontFamily: 'Arial, sans-serif',
+                    maxWidth: '300px',
+                    fontSize: '16px',
+                    border: '1px solid #00ff00',
+                    boxShadow: '0 0 10px #00ff00'
+                }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#ffff00' }}>HOW TO COLLECT SPACEBUCKS:</h3>
+                    <ol style={{ margin: '0', paddingLeft: '20px' }}>
+                        <li>Press 'T' to tether space junk</li>
+                        <li>Drag tethered items to the GREEN DEPOSIT ZONE to the right of your ship</li>
+                        <li><b>Move salvage FULLY INTO</b> the deposit zone</li>
+                        <li>Wait until you see "<span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span>"</li>
+                    </ol>
+                    <button 
+                        onClick={() => setShowHelp(false)}
+                        style={{
+                            marginTop: '10px',
+                            backgroundColor: '#333',
+                            color: 'white',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Got it!
+                    </button>
+                </div>
+            )}
         </div>
     );
 }; 

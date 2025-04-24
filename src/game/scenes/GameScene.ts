@@ -23,6 +23,7 @@ export default class GameScene extends Phaser.Scene {
     private parentShip!: ParentShip;
     private salvageGroup!: Phaser.Physics.Arcade.Group;
     private activeTether: Tether | null = null;
+    private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
 
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
@@ -71,6 +72,9 @@ export default class GameScene extends Phaser.Scene {
         // Create Parent Ship
         this.parentShip = new ParentShip(this, ParentShipConfig.spawnX, ParentShipConfig.spawnY);
 
+        // Create a separate physics body for the deposit zone
+        this.createDepositZoneCollider();
+
         // Create Salvage Group
         this.salvageGroup = this.physics.add.group({
             classType: Salvage,
@@ -111,10 +115,10 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.salvageGroup, this.parentShip); // Salvage bounces off parent ship (static)
         // Note: Player does *not* collide with Parent Ship by default, can add if needed
         // this.physics.add.collider(this.player, this.parentShip);
-
-        // Overlap for Salvage Deposit
+        
+        // Overlap for Salvage Deposit - now using the deposit zone physics body
         this.physics.add.overlap(
-            this.parentShip,
+            this.depositZone,
             this.salvageGroup,
             this.handleSalvageDeposit,
             this.checkDepositEligibility, // Process callback to check if tethered
@@ -427,6 +431,10 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.activeTether.update(delta);
+            
+            // --- Direct Manual Deposit Check ---
+            // If we have an active tether, directly check overlap with deposit zone
+            this.checkForDirectDeposit(tetheredSalvage);
         }
 
         // --- Game Over Condition ---
@@ -538,39 +546,134 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- Collision Handlers ---
+    // Create a physics collider for the deposit zone
+    createDepositZoneCollider() {
+        // Get the deposit zone position from the parent ship
+        const depositZonePos = this.parentShip.getDepositZonePosition();
+        const radius = ParentShipConfig.depositZoneRadius || 120;
 
-    // Process callback for deposit overlap
-    checkDepositEligibility(object1: any, object2: any): boolean {
-        // Determine which is parent ship and which is salvage
-        const parentShip = (object1 instanceof ParentShip) ? object1 : (object2 instanceof ParentShip) ? object2 : null;
-        const salvage = (object1 instanceof Salvage) ? object1 : (object2 instanceof Salvage) ? object2 : null;
-
-        // Ensure we have both and they have bodies
-        if (!parentShip || !salvage || !parentShip.body || !salvage.body) {
-            return false;
+        // Create an invisible sprite to act as the deposit zone collider
+        this.depositZone = this.physics.add.sprite(
+            depositZonePos.x, 
+            depositZonePos.y, 
+            'deposit-zone-collider'
+        );
+        
+        // If the texture doesn't exist, create a simple circular texture
+        if (!this.textures.exists('deposit-zone-collider')) {
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xffffff, 0.3);  // Semi-transparent fill
+            graphics.fillCircle(radius, radius, radius);
+            graphics.lineStyle(4, 0xffff00, 0.8);
+            graphics.strokeCircle(radius, radius, radius);
+            graphics.generateTexture('deposit-zone-collider', radius * 2, radius * 2);
+            graphics.destroy();
         }
-        return salvage.isTethered && salvage.tetheredBy === this.player;
+        
+        // Set up the physics body
+        this.depositZone.setCircle(radius)           // Make the hitbox circular
+                        .setVisible(true)           // Make it visible for debugging
+                        .setImmovable(true)          // Don't move when collided with
+                        .setAlpha(0.3);              // Semi-transparent
+                        
+        // Make it a sensor so it doesn't physically block objects
+        if (this.depositZone.body) {
+            this.depositZone.body.setAllowGravity(false);
+            // Instead of using isSensor (which has TypeScript issues), 
+            // disable all collisions but keep overlap detection
+            (this.depositZone.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(false);
+            // Disable all individual collision directions
+            const body = this.depositZone.body as Phaser.Physics.Arcade.Body;
+            body.checkCollision.up = false;
+            body.checkCollision.down = false;
+            body.checkCollision.left = false;
+            body.checkCollision.right = false;
+        }
+        
+        // Add debug text to monitor overlap
+        const debugText = this.add.text(10, 120, 'Deposit Zone Ready', {
+            fontSize: '18px',
+            color: '#ffff00'
+        }).setScrollFactor(0);
+        
+        // Update debug text every frame
+        this.events.on('update', () => {
+            let activeOverlaps = 0;
+            let tetheredOverlaps = 0;
+            
+            this.salvageGroup.getChildren().forEach(child => {
+                const salvage = child as Salvage;
+                if (Phaser.Geom.Intersects.RectangleToRectangle(
+                    this.depositZone.getBounds(),
+                    salvage.getBounds()
+                )) {
+                    activeOverlaps++;
+                    if (salvage.isTethered && salvage.tetheredBy === this.player) {
+                        tetheredOverlaps++;
+                    }
+                }
+            });
+            
+            debugText.setText(`Deposit Zone: ${activeOverlaps} overlaps, ${tetheredOverlaps} eligible`);
+        });
     }
 
-    handleSalvageDeposit(object1: any, object2: any) {
-        // Determine which is parent ship and which is salvage
-        const parentShip = (object1 instanceof ParentShip) ? object1 : (object2 instanceof ParentShip) ? object2 : null;
-        const salvage = (object1 instanceof Salvage) ? object1 : (object2 instanceof Salvage) ? object2 : null;
+    // Process callback for deposit overlap
+    checkDepositEligibility(depositZone: any, salvage: any): boolean {
+        // We know the first parameter is the deposit zone, and second is salvage
+        if (!(salvage instanceof Salvage) || !salvage.body) {
+            console.log('Deposit check: invalid salvage object');
+            return false;
+        }
+        
+        // Basic overlap check - add extra validation using manual bounds check
+        const boundsOverlap = Phaser.Geom.Intersects.RectangleToRectangle(
+            depositZone.getBounds(),
+            salvage.getBounds()
+        );
+        
+        if (!boundsOverlap) {
+            // If bounds don't overlap, return false immediately
+            return false;
+        }
+        
+        // Log the state for debugging
+        console.log(`Deposit check: Salvage ${salvage.isTethered ? 'IS' : 'NOT'} tethered, ${salvage.tetheredBy === this.player ? 'BY player' : 'NOT by player'}`);
+        
+        // Show visual feedback that salvage can be deposited
+        if (salvage.isTethered && salvage.tetheredBy === this.player) {
+            this.parentShip.showDepositReady();
+            return true;
+        }
+        
+        return false;
+    }
 
-         // Ensure we have both and they have bodies
-        if (!parentShip || !salvage || !parentShip.body || !salvage.body) {
+    handleSalvageDeposit(depositZone: any, salvage: any) {
+        // We know the first parameter is the deposit zone, and second is salvage
+        if (!(salvage instanceof Salvage) || !salvage.body) {
+            console.log('Deposit attempt: invalid salvage object');
             return;
         }
 
         console.log(`Scene: Attempting deposit for salvage value ${salvage.value}`);
+        
+        // Double-check eligibility - belt and suspenders approach
+        if (!(salvage.isTethered && salvage.tetheredBy === this.player)) {
+            console.log('Deposit attempt: not eligible (not tethered by player)');
+            return;
+        }
 
-        // Eligibility is handled by the processCallback (checkDepositEligibility)
+        // Show deposit success effect
+        this.parentShip.showDepositSuccess();
+
+        // Handle scoring
         this.score += salvage.value;
         this.scoreText.setText('Score: ' + this.score);
         EventBus.emit('score-updated', this.score);
         console.log(`Scene: Deposit successful! Score: ${this.score}`);
 
+        // Release tether if active
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
@@ -579,6 +682,67 @@ export default class GameScene extends Phaser.Scene {
                 this.tetherButton.setTint(TouchControlsConfig.colors.normal);
             }
         }
+        
+        // Destroy the salvage
+        salvage.destroy();
+    }
+
+    // Manual overlap check for deposit - this ensures deposits work reliably
+    checkForDirectDeposit(salvage: Salvage) {
+        // Only process if salvage is valid and tethered by player
+        if (!salvage || !salvage.body || !salvage.isTethered || salvage.tetheredBy !== this.player) {
+            return;
+        }
+        
+        // Check if salvage is overlapping with the deposit zone using manual bounds check
+        const salvageBounds = salvage.getBounds();
+        const depositZoneBounds = this.depositZone.getBounds();
+        
+        const boundsOverlap = Phaser.Geom.Intersects.RectangleToRectangle(
+            depositZoneBounds,
+            salvageBounds
+        );
+        
+        if (boundsOverlap) {
+            console.log('DIRECT OVERLAP DETECTED - Triggering deposit process...');
+            
+            // Show visual feedback
+            this.parentShip.showDepositReady();
+            
+            // If overlapping and eligible for deposit, trigger the deposit function directly
+            // Use a small delay to ensure visual feedback is shown before deposit completes
+            this.time.delayedCall(100, () => {
+                if (salvage.active && salvage.isTethered && salvage.tetheredBy === this.player) {
+                    this.handleDirectDeposit(salvage);
+                }
+            });
+        }
+    }
+    
+    // Separate handler for direct deposit processing
+    handleDirectDeposit(salvage: Salvage) {
+        console.log(`Direct deposit processing for salvage value ${salvage.value}`);
+        
+        // Show deposit success effect
+        this.parentShip.showDepositSuccess();
+        
+        // Award score
+        this.score += salvage.value;
+        this.scoreText.setText('Score: ' + this.score);
+        EventBus.emit('score-updated', this.score);
+        console.log(`Scene: Deposit successful! Score: ${this.score}`);
+        
+        // Release tether if active
+        if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
+            this.activeTether.destroy();
+            this.activeTether = null;
+            // Reset tether button visuals
+            if (this.tetherButton) {
+                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
+            }
+        }
+        
+        // Destroy the salvage
         salvage.destroy();
     }
 } 
