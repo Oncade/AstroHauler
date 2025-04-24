@@ -12,7 +12,9 @@ import {
     getRandomSalvageTexture,
     ParentShipConfig,
     BackgroundConfig,
-    TetherConfig
+    TetherConfig,
+    TouchControlsConfig,
+    DeviceDetection
 } from '../config/GameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -25,6 +27,15 @@ export default class GameScene extends Phaser.Scene {
     private score: number = 0;
 
     private keys: { [key: string]: Phaser.Input.Keyboard.Key } = {};
+    
+    // Touch controls
+    private joystick!: { outer: Phaser.GameObjects.Image; inner: Phaser.GameObjects.Image; };
+    private tetherButton!: Phaser.GameObjects.Image;
+    private isTouching: boolean = false;
+    private touchThrust: boolean = false;
+    private touchRotateLeft: boolean = false;
+    private touchRotateRight: boolean = false;
+    private isTouchDevice: boolean = false;
 
     constructor() {
         super('GameScene');
@@ -33,6 +44,10 @@ export default class GameScene extends Phaser.Scene {
     create() {
         console.log('GameScene create');
         const { width, height } = this.scale;
+
+        // Check if this is a touch device
+        this.isTouchDevice = DeviceDetection.isTouchDevice();
+        console.log(`Touch device detected: ${this.isTouchDevice}`);
 
         // Reset score on scene start
         this.score = 0;
@@ -80,6 +95,11 @@ export default class GameScene extends Phaser.Scene {
         } else {
             console.error("Keyboard plugin not available!");
             // this.keys remains {} which is safe
+        }
+
+        // Setup Touch Controls if on a touch device
+        if (this.isTouchDevice) {
+            this.createTouchControls();
         }
 
         // Setup Collisions
@@ -132,17 +152,172 @@ export default class GameScene extends Phaser.Scene {
         EventBus.emit('current-scene-ready', this);
     }
 
+    createTouchControls() {
+        const { width, height } = this.scale;
+        
+        // Calculate positions based on config, handling negative values as offsets from edges
+        const joystickX = TouchControlsConfig.joystickPosition.x >= 0 
+            ? TouchControlsConfig.joystickPosition.x 
+            : width + TouchControlsConfig.joystickPosition.x;
+            
+        const joystickY = TouchControlsConfig.joystickPosition.y >= 0 
+            ? TouchControlsConfig.joystickPosition.y 
+            : height + TouchControlsConfig.joystickPosition.y;
+            
+        const buttonX = TouchControlsConfig.tetherButtonPosition.x >= 0 
+            ? TouchControlsConfig.tetherButtonPosition.x 
+            : width + TouchControlsConfig.tetherButtonPosition.x;
+            
+        const buttonY = TouchControlsConfig.tetherButtonPosition.y >= 0 
+            ? TouchControlsConfig.tetherButtonPosition.y 
+            : height + TouchControlsConfig.tetherButtonPosition.y;
+        
+        // Create virtual joystick with configured sizes
+        this.joystick = {
+            outer: this.add.image(joystickX, joystickY, 'joystick-outer')
+                .setScrollFactor(0)
+                .setAlpha(TouchControlsConfig.opacity)
+                .setDepth(1000)
+                .setScale(TouchControlsConfig.joystickSize / 100),  // Scale based on config size
+            inner: this.add.image(joystickX, joystickY, 'joystick-inner')
+                .setScrollFactor(0)
+                .setAlpha(TouchControlsConfig.opacity + 0.1)  // Slightly more visible
+                .setDepth(1001)
+                .setScale(TouchControlsConfig.joystickSize * 0.6 / 100)  // Smaller inner stick
+        };
+        
+        // Create tether button with configured size
+        this.tetherButton = this.add.image(buttonX, buttonY, 'tether-button')
+            .setScrollFactor(0)
+            .setAlpha(TouchControlsConfig.opacity)
+            .setDepth(1000)
+            .setScale(TouchControlsConfig.buttonSize / 100)
+            .setInteractive()
+            .setTint(TouchControlsConfig.colors.normal);
+            
+        // Tether button events
+        this.tetherButton.on('pointerdown', () => {
+            if (this.activeTether) {
+                // If already tethered, release the tether
+                this.activeTether.destroy();
+                this.activeTether = null;
+                console.log('Scene: Tether released by touch.');
+                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
+            } else {
+                // If not tethered, try to attach to nearest salvage
+                this.attemptTetherAttach();
+                if (this.activeTether) {
+                    this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                }
+            }
+        });
+        
+        // Setup joystick input
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // Only process if it's near the joystick area
+            const distToJoystick = Phaser.Math.Distance.Between(
+                pointer.x, pointer.y, 
+                this.joystick.outer.x, this.joystick.outer.y
+            );
+            
+            if (distToJoystick < TouchControlsConfig.joystickSize) {
+                this.isTouching = true;
+                this.updateJoystick(pointer);
+            }
+        });
+        
+        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (this.isTouching && pointer.isDown) {
+                this.updateJoystick(pointer);
+            }
+        });
+        
+        this.input.on('pointerup', () => {
+            this.resetJoystick();
+            this.isTouching = false;
+            this.touchThrust = false;
+            this.touchRotateLeft = false;
+            this.touchRotateRight = false;
+        });
+    }
+    
+    updateJoystick(pointer: Phaser.Input.Pointer) {
+        const joystickCenterX = this.joystick.outer.x;
+        const joystickCenterY = this.joystick.outer.y;
+        
+        // Calculate distance from center
+        const dx = pointer.x - joystickCenterX;
+        const dy = pointer.y - joystickCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const maxDistance = TouchControlsConfig.joystickSize * 0.5; // Maximum joystick movement
+        
+        if (distance > TouchControlsConfig.joystickDeadZone) { // Use configured dead zone
+            // Calculate angle
+            const angle = Math.atan2(dy, dx);
+            
+            // Normalize position to max distance
+            const limitedDistance = Math.min(distance, maxDistance);
+            const normalizedX = Math.cos(angle) * limitedDistance;
+            const normalizedY = Math.sin(angle) * limitedDistance;
+            
+            // Update inner joystick position
+            this.joystick.inner.x = joystickCenterX + normalizedX;
+            this.joystick.inner.y = joystickCenterY + normalizedY;
+            
+            // Convert angle to controls (thrust + rotation)
+            // Front/Back is thrust, Left/Right is rotation
+            const angleDegrees = angle * (180 / Math.PI);
+            
+            // Left-right is for rotation (consider the angle in a circle)
+            if (angleDegrees > -135 && angleDegrees < -45) {
+                // Top quadrant - thrust
+                this.touchThrust = true;
+                this.touchRotateLeft = false;
+                this.touchRotateRight = false;
+            } else if (angleDegrees >= -45 && angleDegrees < 45) {
+                // Right quadrant - rotate right
+                this.touchThrust = false;
+                this.touchRotateLeft = false;
+                this.touchRotateRight = true;
+            } else if (angleDegrees >= 45 && angleDegrees < 135) {
+                // Bottom quadrant - no thrust (or backward if implemented)
+                this.touchThrust = false;
+                this.touchRotateLeft = false;
+                this.touchRotateRight = false;
+            } else {
+                // Left quadrant - rotate left
+                this.touchThrust = false;
+                this.touchRotateLeft = true;
+                this.touchRotateRight = false;
+            }
+        } else {
+            // Center position - no input
+            this.resetJoystick();
+        }
+    }
+    
+    resetJoystick() {
+        if (this.joystick) {
+            this.joystick.inner.x = this.joystick.outer.x;
+            this.joystick.inner.y = this.joystick.outer.y;
+        }
+        this.touchThrust = false;
+        this.touchRotateLeft = false;
+        this.touchRotateRight = false;
+    }
+
     update(time: number, delta: number) {
         // --- Handle Input ---
-        if (this.keys.left.isDown) {
+        // Keyboard Controls
+        if (this.keys.left?.isDown || this.touchRotateLeft) {
             this.player.moveLeft();
-        } else if (this.keys.right.isDown) {
+        } else if (this.keys.right?.isDown || this.touchRotateRight) {
             this.player.moveRight();
         } else {
             this.player.stopRotation();
         }
 
-        if (this.keys.thrust.isDown) {
+        if (this.keys.thrust?.isDown || this.touchThrust) {
             this.player.thrust();
         }
 
@@ -153,9 +328,17 @@ export default class GameScene extends Phaser.Scene {
                 this.activeTether.destroy();
                 this.activeTether = null;
                 console.log('Scene: Tether released by key press.');
+                // Update tether button visual if it exists
+                if (this.tetherButton) {
+                    this.tetherButton.setTint(TouchControlsConfig.colors.normal);
+                }
             } else {
                 // If not tethered, try to attach to nearest salvage
                 this.attemptTetherAttach();
+                // Update tether button visual if tether attached
+                if (this.activeTether && this.tetherButton) {
+                    this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                }
             }
         }
 
@@ -276,6 +459,10 @@ export default class GameScene extends Phaser.Scene {
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
+            // Reset tether button visuals
+            if (this.tetherButton) {
+                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
+            }
         }
         salvage.destroy();
     }

@@ -19,13 +19,57 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.setCollideWorldBounds(true);
         this.setBounce(0.2); // Keep bounce low
 
-        // Create and configure the range indicator
+        // Create and configure the range indicator with improved visibility for touch
         this.rangeIndicator = scene.add.graphics();
-        this.rangeIndicator.lineStyle(1, TetherConfig.attachRangeIndicatorColor, TetherConfig.attachRangeIndicatorAlpha);
-        this.rangeIndicator.strokeCircle(0, 0, TetherConfig.maxAttachDistance); // Draw circle relative to graphic's origin
-        this.rangeIndicator.setVisible(!this.isTethered); // Initially visible if not tethered
+        
+        // Enhanced visibility for the range indicator (pulse effect)
+        this.createEnhancedRangeIndicator();
+        
+        // Start the pulsing animation for better visibility on touch screens
+        this.startPulseAnimation();
 
         console.log('Player created using config');
+    }
+    
+    // Create an enhanced range indicator with better visibility for touch screens
+    createEnhancedRangeIndicator() {
+        this.rangeIndicator.clear();
+        
+        // Outer ring (more visible)
+        this.rangeIndicator.lineStyle(2, TetherConfig.attachRangeIndicatorColor, TetherConfig.attachRangeIndicatorAlpha);
+        this.rangeIndicator.strokeCircle(0, 0, TetherConfig.maxAttachDistance);
+        
+        // Inner guiding circles
+        this.rangeIndicator.lineStyle(1, TetherConfig.attachRangeIndicatorColor, TetherConfig.attachRangeIndicatorAlpha * 0.7);
+        this.rangeIndicator.strokeCircle(0, 0, TetherConfig.maxAttachDistance * 0.75);
+        this.rangeIndicator.strokeCircle(0, 0, TetherConfig.maxAttachDistance * 0.5);
+        
+        // Cross in the middle for better visibility
+        this.rangeIndicator.lineStyle(1, TetherConfig.attachRangeIndicatorColor, TetherConfig.attachRangeIndicatorAlpha * 0.7);
+        this.rangeIndicator.beginPath();
+        this.rangeIndicator.moveTo(-10, 0);
+        this.rangeIndicator.lineTo(10, 0);
+        this.rangeIndicator.moveTo(0, -10);
+        this.rangeIndicator.lineTo(0, 10);
+        this.rangeIndicator.closePath();
+        this.rangeIndicator.strokePath();
+        
+        this.rangeIndicator.setVisible(!this.isTethered);
+    }
+    
+    // Start pulsing animation for better visibility
+    startPulseAnimation() {
+        if (!this.scene) return;
+        
+        // Create a pulse animation for the range indicator
+        this.scene.tweens.add({
+            targets: this.rangeIndicator,
+            alpha: { from: TetherConfig.attachRangeIndicatorAlpha, to: TetherConfig.attachRangeIndicatorAlpha * 0.4 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 
     // --- Tether Methods ---
@@ -102,6 +146,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Ensure indicator is destroyed when player is destroyed
     destroy(fromScene?: boolean) {
+        // Stop any tweens on the range indicator before destroying
+        if (this.scene) {
+            this.scene.tweens.killTweensOf(this.rangeIndicator);
+        }
         this.rangeIndicator.destroy();
         super.destroy(fromScene);
     }

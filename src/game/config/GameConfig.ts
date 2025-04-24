@@ -1,5 +1,14 @@
 import Phaser from 'phaser';
 
+// Device detection helper
+export const DeviceDetection = {
+    isTouchDevice: (): boolean => {
+        return (('ontouchstart' in window) || 
+                (navigator.maxTouchPoints > 0) || 
+                ('msMaxTouchPoints' in navigator && (navigator as any).msMaxTouchPoints > 0));
+    }
+};
+
 // Define configuration constants
 export const GameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -21,6 +30,10 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
         }
     },
     // Scene list will be added in main.ts
+    input: {
+        activePointers: 3, // Support multi-touch with up to 3 pointers
+        touch: { capture: true } // Enable touch events
+    }
 };
 
 // Player Specific Config
@@ -42,6 +55,27 @@ export const ControlKeys = {
     // Add strafe keys if needed later
     // strafeLeft: 'Q',
     // strafeRight: 'E',
+};
+
+// Touch Controls Config
+export const TouchControlsConfig = {
+    joystickSize: 150,          // Size of virtual joystick in pixels
+    buttonSize: 100,            // Size of virtual buttons in pixels
+    opacity: 0.7,               // Opacity of touch controls
+    joystickPosition: {
+        x: 150,                 // Position from left edge
+        y: -150                 // Position from bottom edge (negative for bottom positioning)
+    },
+    tetherButtonPosition: {
+        x: -150,                // Position from right edge (negative for right positioning)
+        y: -150                 // Position from bottom edge (negative for bottom positioning)
+    },
+    joystickDeadZone: 10,       // Deadzone in pixels for the joystick
+    colors: {
+        normal: 0xffffff,       // Normal state color
+        active: 0x00ff00,       // Active state color
+        warning: 0xff0000       // Warning state color
+    }
 };
 
 // Tether Config
