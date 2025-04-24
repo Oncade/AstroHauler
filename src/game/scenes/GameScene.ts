@@ -200,11 +200,13 @@ export default class GameScene extends Phaser.Scene {
             .setAlpha(TouchControlsConfig.opacity)
             .setDepth(1000)
             .setScale(TouchControlsConfig.buttonSize / 100)
-            .setInteractive()
+            .setInteractive() // Revert to simple interaction without custom hit area
             .setTint(TouchControlsConfig.colors.normal);
             
         // Tether button events
-        this.tetherButton.on('pointerdown', () => {
+        this.tetherButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // Don't stop propagation as it might be interfering with touch events
+            
             if (this.activeTether) {
                 // If already tethered, release the tether
                 this.activeTether.destroy();
@@ -220,33 +222,47 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         
-        // Setup joystick input
+        // Track the joystick pointer ID to handle multiple simultaneous touches
+        let joystickPointerId: number | null = null;
+        
+        // Setup joystick input - handle multiple simultaneous touches
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            // Only process if it's near the joystick area
+            // Only process if it's near the joystick area and we're not already tracking a joystick pointer
             const distToJoystick = Phaser.Math.Distance.Between(
                 pointer.x, pointer.y, 
                 this.joystick.outer.x, this.joystick.outer.y
             );
             
-            if (distToJoystick < TouchControlsConfig.joystickSize) {
+            if (distToJoystick < TouchControlsConfig.joystickHitArea && joystickPointerId === null) {
+                // Start tracking this pointer for joystick movement
+                joystickPointerId = pointer.id;
                 this.isTouching = true;
                 this.updateJoystick(pointer);
             }
         });
         
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            if (this.isTouching && pointer.isDown) {
+            // Only update if this is the pointer we're tracking for the joystick
+            if (this.isTouching && pointer.isDown && pointer.id === joystickPointerId) {
                 this.updateJoystick(pointer);
             }
         });
         
-        this.input.on('pointerup', () => {
-            this.resetJoystick();
-            this.isTouching = false;
-            this.touchThrust = false;
-            // Clear the direction indicator
-            this.touchDirectionIndicator.clear();
-        });
+        // Handle both pointer up and pointer cancel events
+        const handlePointerRelease = (pointer: Phaser.Input.Pointer) => {
+            // Only reset if this is the pointer we're tracking for the joystick
+            if (pointer.id === joystickPointerId) {
+                this.resetJoystick();
+                this.isTouching = false;
+                this.touchThrust = false;
+                joystickPointerId = null;
+                // Clear the direction indicator
+                this.touchDirectionIndicator.clear();
+            }
+        };
+        
+        this.input.on('pointerup', handlePointerRelease);
+        this.input.on('pointercancel', handlePointerRelease);
     }
     
     updateJoystick(pointer: Phaser.Input.Pointer) {

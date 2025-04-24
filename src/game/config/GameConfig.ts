@@ -61,6 +61,8 @@ export const ControlKeys = {
 export const TouchControlsConfig = {
     joystickSize: 150,          // Size of virtual joystick in pixels
     buttonSize: 100,            // Size of virtual buttons in pixels
+    joystickHitArea: 200,       // Size of the joystick's interactive area (larger than visible area)
+    buttonHitArea: 150,         // Size of the tether button's interactive area (larger than visible)
     opacity: 0.7,               // Opacity of touch controls
     joystickPosition: {
         x: 150,                 // Position from left edge
