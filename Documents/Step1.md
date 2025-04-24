@@ -47,8 +47,8 @@ src/
 ### 1. Ship Movement and Physics Setup
 
 - Implement player ship with Phaser's Arcade Physics **(Done - Player class created)**
-- Create responsive controls for keyboard, mouse, and touch inputs **(Keyboard Done - Week 2, Mouse/Touch Deferred)**
-- Simulate low-gravity, inertia-driven movement **(Done - Via Player physics properties & config)**
+- Create responsive controls for keyboard, mouse, and touch inputs **(Keyboard Done - Week 2, Touch Implementation Added - Week 3)**
+- Simulate low-gravity, inertia-driven movement **(Done - Zero-drag space physics implementation, objects maintain momentum)**
 - Add ship sprites with proper animations for thrusting and rotation **(Done - Placeholder sprite added, animations pending assets)**
 
 ### 2. Tether System
@@ -56,8 +56,10 @@ src/
 - Create a physics-based tether connecting player ship to salvage **(Done - Week 2, Arcade physics simulation implemented in Tether class)**
 - **(New)** Activate tether via key press ('t') when near salvage within a configurable range.
 - **(New)** Display a visual indicator around the player showing the maximum tether attachment range.
+- **(New)** Enhanced visual feedback for tether with stretch indicators and salvage highlighting.
+- **(New)** Proper momentum preservation when tether is disconnected (zero-drag space physics).
 - Implement realistic swing and momentum for tethered objects **(Partial - Week 2, Basic spring/damping forces added; full realism likely needs refinement/Matter.js)**
-- Visualize tether as a line with proper tension representation **(Done - Week 2, Line drawn via Graphics, tension not visually represented yet)**
+- Visualize tether as a line with proper tension representation **(Done - Week 2&3, Line drawn via Graphics with visual stretch indicators)**
 - Handle collision detection between tethered salvage and environment **(Partial - Week 2, Salvage collides with world/other salvage, explicit tether collision not implemented)**
 
 ### 3. Salvage Collection
@@ -90,9 +92,10 @@ src/
 
 - [X] Player ship controls *(Keyboard WASD implemented Week 2 via GameScene)*
 - [X] **(New)** Tether activation/release control *(Keyboard 't' implemented)*
+- [X] **(New)** Touch controls with virtual joystick and tether button *(Week 3)*
 - [X] Simple level with scattered salvage items *(Random spawning implemented Week 2)*
 - [X] Parent ship as deposit point *(Implemented Week 2)*
-- [X] Basic physics and tether mechanics *(Arcade physics simulation implemented Week 2)*
+- [X] Basic physics and tether mechanics *(Zero-drag space physics implemented for realistic momentum preservation)*
 - [X] Minimal HUD showing:
   - [X] Current score (Implemented Week 2)
   - [X] Exit button (returns to main menu)
@@ -154,6 +157,9 @@ src/
 - [X] Implement EventBus communication for UI updates *(Implemented for score)*
 - [X] Add exit button functionality and basic menu navigation *(Confirmed functional)*
 - [X] Implement basic scoring logic based on deposited salvage *(Confirmed functional)*
+- [X] **(New)** Implement touch controls with virtual joystick and tether button
+- [X] **(New)** Implement zero-drag space physics for realistic momentum preservation when tether is disconnected
+- [X] **(New)** Add enhanced visual feedback for tether with stretch indicators and salvage highlighting
 
 ### Week 4: Polishing and Testing
 - [ ] Refine physics and movement feel (based on playtesting)
@@ -167,11 +173,12 @@ src/
 ### Physics Implementation
 - [X] Use Phaser's Arcade Physics for ship movement
 - [X] Implement custom physics for the tether system using point-to-point constraints *(Simulated using Arcade spring/damping forces in Tether.ts for Phase 1)*
-- [X] Handle mass and inertia calculations for realistic movement *(Basic mass/drag/force concepts implemented)*
+- [X] Handle mass and inertia calculations for realistic movement *(Basic mass/drag/force concepts implemented with zero drag for space physics)*
+- [X] **(New)** Implement proper momentum preservation when tether is disconnected (zero-drag, zero-friction space physics)
 
 ### Input Handling
-- [X] Create adaptable control scheme that works across devices *(Keyboard WASD + T implemented Week 2/3 via config)*
-- [ ] Implement touch controls that mirror keyboard/mouse functionality *(Deferred to Phase 2)*
+- [X] Create adaptable control scheme that works across devices *(Keyboard WASD + T implemented Week 2/3 via config, touch controls added Week 3)*
+- [X] **(New)** Implement touch controls that mirror keyboard/mouse functionality *(Added virtual joystick and tether button)*
 - [X] Use EventBus to communicate input changes between React and Phaser *(Input handled in GameScene, EventBus used for score updates)*
 
 ### Performance Optimization
@@ -189,4 +196,12 @@ src/
 
 ## Conclusion
 
-This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects, keyboard controls, basic UI, and the initial salvage collection loop. **The tether system has been updated to use a key press ('t') for activation/deactivation, targeting the nearest salvage within a configurable range, which is now visually indicated.** The next step (Week 3 focus) involves refining the game flow between scenes and hooking up the React UI to display game state information like the score (partially done). Week 4 focuses on polishing and testing. 
+This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects, keyboard controls, basic UI, and the initial salvage collection loop. **The tether system has been updated to use a key press ('t') for activation/deactivation, targeting the nearest salvage within a configurable range, which is now visually indicated.** 
+
+**Week 3 updates include:**
+1. Implementing zero-drag space physics for proper momentum preservation when tether is disconnected
+2. Adding enhanced visual feedback for the tether with stretch indicators and salvage highlighting
+3. Implementing touch controls with a virtual joystick and tether button
+4. Ensuring player and salvage maintain their velocity when the tether is disconnected
+
+The next step (Week 4) focuses on polishing and testing the game mechanics, refining the physics feel, and optimizing performance across different devices. 
