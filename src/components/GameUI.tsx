@@ -86,14 +86,14 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
                     
                     <h4 style={{ color: '#ffff00', marginBottom: '5px' }}>How to Collect SpaceBucks:</h4>
                     <ol style={{ marginTop: '5px', paddingLeft: '20px' }}>
-                        <li>Press <b>T</b> to tether the nearest salvage</li>
-                        <li>Drag the tethered salvage to the <span style={{ color: '#00ff00' }}>GREEN DEPOSIT ZONE</span></li>
+                        <li>Salvage is automatically collected when it enters the <span style={{ color: '#00ff00' }}>GREEN DEPOSIT ZONE</span></li>
+                        <li>You can use <b>T</b> to tether salvage and drag it to the deposit zone</li>
                         <li><b>Move salvage directly into the center</b> of the deposit zone</li>
-                        <li>Keep the salvage inside the zone until you see <span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span></li>
+                        <li>Watch for the <span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span> message</li>
                     </ol>
                     
                     <div style={{ borderTop: '1px solid #444', marginTop: '10px', paddingTop: '10px' }}>
-                        <p style={{ color: '#ff9900', margin: 0 }}>Tip: The deposit zone will turn yellow when salvage can be deposited!</p>
+                        <p style={{ color: '#ff9900', margin: 0 }}>Tip: The deposit zone will turn yellow when salvage is ready to be deposited!</p>
                     </div>
                     
                     <button 
@@ -131,10 +131,10 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
                 }}>
                     <h3 style={{ margin: '0 0 10px 0', color: '#ffff00' }}>HOW TO COLLECT SPACEBUCKS:</h3>
                     <ol style={{ margin: '0', paddingLeft: '20px' }}>
-                        <li>Press 'T' to tether space junk</li>
-                        <li>Drag tethered items to the GREEN DEPOSIT ZONE to the right of your ship</li>
+                        <li>Any space junk will be collected when it enters the deposit zone</li>
+                        <li>Use 'T' to tether space junk and drag it to the GREEN DEPOSIT ZONE</li>
                         <li><b>Move salvage FULLY INTO</b> the deposit zone</li>
-                        <li>Wait until you see "<span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span>"</li>
+                        <li>Watch for "<span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span>"</li>
                     </ol>
                     <button 
                         onClick={() => setShowHelp(false)}

@@ -121,7 +121,7 @@ export default class GameScene extends Phaser.Scene {
             this.depositZone,
             this.salvageGroup,
             this.handleSalvageDeposit,
-            this.checkDepositEligibility, // Process callback to check if tethered
+            this.checkDepositEligibility, // Process callback to check if tethered - now checks only overlap
             this
         );
 
@@ -157,6 +157,25 @@ export default class GameScene extends Phaser.Scene {
 
         // Emit the ready event for React bridge
         EventBus.emit('current-scene-ready', this);
+
+        // Update all salvage objects to check for deposit zone overlap
+        this.events.on('update', () => {
+            // Check untethered salvage for direct deposit
+            this.salvageGroup.getChildren().forEach(child => {
+                const salvage = child as Salvage;
+                if (salvage.active) {
+                    this.checkForDirectDeposit(salvage);
+                }
+            });
+            
+            // If we have an active tether, also check its salvage
+            if (this.activeTether) {
+                const tetheredSalvage = this.activeTether.getAttachedSalvage();
+                if (tetheredSalvage.active) {
+                    this.checkForDirectDeposit(tetheredSalvage);
+                }
+            }
+        });
     }
 
     createTouchControls() {
@@ -431,10 +450,6 @@ export default class GameScene extends Phaser.Scene {
             }
 
             this.activeTether.update(delta);
-            
-            // --- Direct Manual Deposit Check ---
-            // If we have an active tether, directly check overlap with deposit zone
-            this.checkForDirectDeposit(tetheredSalvage);
         }
 
         // --- Game Over Condition ---
@@ -638,15 +653,11 @@ export default class GameScene extends Phaser.Scene {
         }
         
         // Log the state for debugging
-        console.log(`Deposit check: Salvage ${salvage.isTethered ? 'IS' : 'NOT'} tethered, ${salvage.tetheredBy === this.player ? 'BY player' : 'NOT by player'}`);
+        console.log(`Deposit check: Salvage overlapping deposit zone - ${salvage.isTethered ? 'IS' : 'NOT'} tethered`);
         
-        // Show visual feedback that salvage can be deposited
-        if (salvage.isTethered && salvage.tetheredBy === this.player) {
-            this.parentShip.showDepositReady();
-            return true;
-        }
-        
-        return false;
+        // Show visual feedback that salvage can be deposited - for all salvage
+        this.parentShip.showDepositReady();
+        return true;
     }
 
     handleSalvageDeposit(depositZone: any, salvage: any) {
@@ -658,12 +669,6 @@ export default class GameScene extends Phaser.Scene {
 
         console.log(`Scene: Attempting deposit for salvage value ${salvage.value}`);
         
-        // Double-check eligibility - belt and suspenders approach
-        if (!(salvage.isTethered && salvage.tetheredBy === this.player)) {
-            console.log('Deposit attempt: not eligible (not tethered by player)');
-            return;
-        }
-
         // Show deposit success effect
         this.parentShip.showDepositSuccess();
 
@@ -673,7 +678,7 @@ export default class GameScene extends Phaser.Scene {
         EventBus.emit('score-updated', this.score);
         console.log(`Scene: Deposit successful! Score: ${this.score}`);
 
-        // Release tether if active
+        // Release tether if active and attached to this salvage
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
@@ -689,8 +694,8 @@ export default class GameScene extends Phaser.Scene {
 
     // Manual overlap check for deposit - this ensures deposits work reliably
     checkForDirectDeposit(salvage: Salvage) {
-        // Only process if salvage is valid and tethered by player
-        if (!salvage || !salvage.body || !salvage.isTethered || salvage.tetheredBy !== this.player) {
+        // Only process if salvage is valid
+        if (!salvage || !salvage.body) {
             return;
         }
         
@@ -709,10 +714,10 @@ export default class GameScene extends Phaser.Scene {
             // Show visual feedback
             this.parentShip.showDepositReady();
             
-            // If overlapping and eligible for deposit, trigger the deposit function directly
+            // If overlapping, trigger the deposit function directly
             // Use a small delay to ensure visual feedback is shown before deposit completes
             this.time.delayedCall(100, () => {
-                if (salvage.active && salvage.isTethered && salvage.tetheredBy === this.player) {
+                if (salvage.active) {
                     this.handleDirectDeposit(salvage);
                 }
             });
@@ -732,7 +737,7 @@ export default class GameScene extends Phaser.Scene {
         EventBus.emit('score-updated', this.score);
         console.log(`Scene: Deposit successful! Score: ${this.score}`);
         
-        // Release tether if active
+        // Release tether if active and attached to this salvage
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
