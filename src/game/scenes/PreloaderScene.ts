@@ -76,6 +76,7 @@ export default class PreloaderScene extends Phaser.Scene {
         this.load.image('joystick-outer', 'assets/ui/joystick-outer.png');
         this.load.image('joystick-inner', 'assets/ui/joystick-inner.png');
         this.load.image('tether-button', 'assets/ui/tether-button.png');
+        this.load.image('thrust-button', 'assets/ui/thrust-button.png');
 
         // Placeholder for audio assets (Week 4)
         // this.load.audio('thruster', 'assets/audio/thruster.wav');

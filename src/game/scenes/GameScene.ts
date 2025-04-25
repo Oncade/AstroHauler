@@ -35,9 +35,13 @@ export default class GameScene extends Phaser.Scene {
     // Touch controls
     private joystick!: { outer: Phaser.GameObjects.Image; inner: Phaser.GameObjects.Image; };
     private tetherButton!: Phaser.GameObjects.Image;
+    private thrustButton!: Phaser.GameObjects.Image;
     private isTouching: boolean = false;
     private touchThrust: boolean = false;
-    private targetRotation: number = 0; // Target rotation angle for the ship
+    private isThrustButtonPressed: boolean = false;
+    private currentThrustForce: number = 0;
+    private thrustTween: Phaser.Tweens.Tween | null = null;
+    private targetRotation: number = 0;
     private isTouchDevice: boolean = false;
     private joystickAngle: number = 0;
     private joystickDistance: number = 0;
@@ -54,6 +58,41 @@ export default class GameScene extends Phaser.Scene {
         // Check if this is a touch device
         this.isTouchDevice = DeviceDetection.isTouchDevice();
         console.log(`Touch device detected: ${this.isTouchDevice}`);
+
+        // Create thrust button texture if it doesn't exist
+        if (!this.textures.exists('thrust-button')) {
+            console.log('Creating thrust-button texture');
+            // Create texture size 100x100
+            const radius = 50;
+            const graphics = this.add.graphics();
+            
+            // Create circular button with rocket icon
+            graphics.fillStyle(0x333333, 1);
+            graphics.fillCircle(radius, radius, radius);
+            
+            // Add a rocket/thrust icon
+            graphics.fillStyle(0xffcc00, 1);
+            
+            // Draw rocket shape
+            graphics.fillRect(radius - 15, radius - 25, 30, 40); // Rocket body
+            graphics.fillTriangle(
+                radius - 15, radius + 15, // Left point
+                radius + 15, radius + 15, // Right point
+                radius, radius + 30      // Bottom point
+            );
+            
+            // Add thrust flames
+            graphics.fillStyle(0xff3300, 1);
+            graphics.fillTriangle(
+                radius - 10, radius + 15, // Left point
+                radius + 10, radius + 15, // Right point
+                radius, radius + 40      // Bottom point
+            );
+            
+            // Generate texture
+            graphics.generateTexture('thrust-button', 100, 100);
+            graphics.destroy();
+        }
 
         // Load persisted total SpaceBucks if available
         this.loadTotalSpaceBucks();
@@ -218,6 +257,15 @@ export default class GameScene extends Phaser.Scene {
             ? TouchControlsConfig.tetherButtonPosition.y 
             : height + TouchControlsConfig.tetherButtonPosition.y;
         
+        // Calculate thrust button position
+        const thrustButtonX = TouchControlsConfig.thrustButtonPosition.x >= 0 
+            ? TouchControlsConfig.thrustButtonPosition.x 
+            : width + TouchControlsConfig.thrustButtonPosition.x;
+            
+        const thrustButtonY = TouchControlsConfig.thrustButtonPosition.y >= 0 
+            ? TouchControlsConfig.thrustButtonPosition.y 
+            : height + TouchControlsConfig.thrustButtonPosition.y;
+        
         // Create virtual joystick with configured sizes
         this.joystick = {
             outer: this.add.image(joystickX, joystickY, 'joystick-outer')
@@ -246,6 +294,15 @@ export default class GameScene extends Phaser.Scene {
             .setInteractive() // Revert to simple interaction without custom hit area
             .setTint(TouchControlsConfig.colors.normal);
             
+        // Create thrust button
+        this.thrustButton = this.add.image(thrustButtonX, thrustButtonY, 'thrust-button')
+            .setScrollFactor(0)
+            .setAlpha(TouchControlsConfig.opacity)
+            .setDepth(1000)
+            .setScale(TouchControlsConfig.buttonSize / 100)
+            .setInteractive()
+            .setTint(TouchControlsConfig.colors.normal);
+        
         // Tether button events
         this.tetherButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             // Don't stop propagation as it might be interfering with touch events
@@ -263,6 +320,36 @@ export default class GameScene extends Phaser.Scene {
                     this.tetherButton.setTint(TouchControlsConfig.colors.active);
                 }
             }
+        });
+        
+        // Thrust button events
+        this.thrustButton.on('pointerdown', () => {
+            this.isThrustButtonPressed = true;
+            this.thrustButton.setTint(TouchControlsConfig.colors.active);
+            
+            // Start with initial thrust force
+            this.currentThrustForce = TouchControlsConfig.thrustParameters.initialForce;
+            
+            // Stop any existing tween
+            if (this.thrustTween) {
+                this.thrustTween.stop();
+            }
+            
+            // Create a tween to gradually increase thrust force
+            this.thrustTween = this.tweens.add({
+                targets: this,
+                currentThrustForce: TouchControlsConfig.thrustParameters.maxForce,
+                duration: TouchControlsConfig.thrustParameters.rampUpTime,
+                ease: TouchControlsConfig.thrustParameters.rampUpEase,
+            });
+        });
+        
+        this.thrustButton.on('pointerup', () => {
+            this.stopThrust();
+        });
+        
+        this.thrustButton.on('pointerout', () => {
+            this.stopThrust();
         });
         
         // Track the joystick pointer ID to handle multiple simultaneous touches
@@ -343,9 +430,6 @@ export default class GameScene extends Phaser.Scene {
             
             // Draw direction indicator
             this.updateDirectionIndicator();
-            
-            // Always enable thrust when joystick is active
-            this.touchThrust = true;
         } else {
             // Center position - no input
             this.resetJoystick();
@@ -357,7 +441,7 @@ export default class GameScene extends Phaser.Scene {
         this.touchDirectionIndicator.clear();
         
         // Don't draw if not actively using joystick
-        if (!this.isTouching || !this.touchThrust) return;
+        if (!this.isTouching) return;
         
         // Calculate direction line endpoints
         const startX = this.joystick.outer.x;
@@ -366,7 +450,7 @@ export default class GameScene extends Phaser.Scene {
         const endX = startX + Math.cos(this.joystickAngle) * length;
         const endY = startY + Math.sin(this.joystickAngle) * length;
         
-        // Draw arrow to show thrust direction using config settings
+        // Draw arrow to show rotation direction using config settings
         this.touchDirectionIndicator.lineStyle(
             TouchControlsConfig.directionIndicator.lineWidth, 
             TouchControlsConfig.directionIndicator.color, 
@@ -412,7 +496,7 @@ export default class GameScene extends Phaser.Scene {
     update(time: number, delta: number) {
         // --- Handle Input ---
         // Handle rotation differently for keyboard vs. touch
-        if (this.isTouchDevice && this.isTouching && this.touchThrust) {
+        if (this.isTouchDevice && this.isTouching) {
             // Touch controls - rotate ship to face the direction of joystick movement
             this.rotateShipTowards(this.targetRotation, delta);
         } else {
@@ -430,11 +514,9 @@ export default class GameScene extends Phaser.Scene {
         if (this.keys.thrust?.isDown) {
             // Keyboard thrust - always in the direction the ship is facing
             this.player.thrust();
-        } else if (this.touchThrust && this.isTouching) {
-            // Touch thrust - apply in the direction of the joystick angle
-            // Since the ship will rotate to match this direction, we can just use thrust()
-            // Use the intensity of the joystick movement to modulate thrust force
-            this.player.thrustWithForce(this.joystickDistance * PlayerConfig.thrustForce);
+        } else if (this.isThrustButtonPressed) {
+            // Thrust button - apply gradual thrust in the direction the ship is facing
+            this.player.thrustWithForce(this.currentThrustForce);
         }
 
         // --- Handle Tether Key Press ---
@@ -1018,5 +1100,19 @@ export default class GameScene extends Phaser.Scene {
         
         cancelButton.on('pointerover', () => cancelButton.setStyle({ backgroundColor: '#770000' }));
         cancelButton.on('pointerout', () => cancelButton.setStyle({ backgroundColor: '#333333' }));
+    }
+
+    // Helper method to stop thrust and reset values
+    stopThrust() {
+        this.isThrustButtonPressed = false;
+        this.thrustButton.setTint(TouchControlsConfig.colors.normal);
+        
+        // Stop the thrust ramp-up tween
+        if (this.thrustTween) {
+            this.thrustTween.stop();
+        }
+        
+        // Reset thrust force
+        this.currentThrustForce = 0;
     }
 } 

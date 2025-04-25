@@ -72,6 +72,16 @@ export const TouchControlsConfig = {
         x: -150,                // Position from right edge (negative for right positioning)
         y: -150                 // Position from bottom edge (negative for bottom positioning)
     },
+    thrustButtonPosition: {
+        x: -280,                // Position from right edge (negative for right positioning)
+        y: -150                 // Position from bottom edge (negative for bottom positioning)
+    },
+    thrustParameters: {
+        initialForce: 30,       // Initial thrust force when button is first pressed
+        maxForce: 175,          // Maximum thrust force when fully ramped up
+        rampUpTime: 1000,       // Time in ms to reach maximum thrust
+        rampUpEase: 'Sine.easeInOut', // Easing function for thrust ramp-up
+    },
     joystickDeadZone: 10,       // Deadzone in pixels for the joystick
     colors: {
         normal: 0xffffff,       // Normal state color

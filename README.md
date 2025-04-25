@@ -49,14 +49,19 @@ Once the server is running you can edit any of the files in the `src` folder. Vi
 The game automatically detects touch devices and displays touch controls:
 
 - **Virtual Joystick** - Located in the lower-left corner of the screen:
-  - Drag in any direction: Ship will automatically rotate to face and move in that direction
-  - Dragging further from center increases both rotation speed and thrust intensity
-  - A direction indicator arrow shows the thrust direction
+  - Drag in any direction: Ship will rotate to face that direction
+  - Dragging further from center increases rotation speed
+  - A direction indicator arrow shows the rotation direction
 
 - **Tether Button** - Located in the lower-right corner of the screen:
   - Tap to toggle tether (attach/detach)
   - Green when tether is active
   - White when tether is inactive
+
+- **Thrust Button** - Located next to the tether button:
+  - Press and hold to apply thrust in the direction the ship is facing
+  - Thrust gradually increases while the button is held down
+  - Release to stop applying thrust
 
 Touch controls are fully configurable in `src/game/config/GameConfig.ts` under the `TouchControlsConfig` section.
 
@@ -65,6 +70,7 @@ The game requires the following UI assets for touch controls:
 - `public/assets/ui/joystick-outer.png` - The outer circle for the virtual joystick
 - `public/assets/ui/joystick-inner.png` - The inner knob for the virtual joystick
 - `public/assets/ui/tether-button.png` - The tether toggle button
+- `public/assets/ui/thrust-button.png` - The thrust button for applying forward thrust
 
 To generate placeholder assets:
 1. Open `public/assets/ui/generate-touch-assets.html` in your browser
