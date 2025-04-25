@@ -52,6 +52,7 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         this.showTetherIndicator();
         
         console.log(`Salvage ${this.texture.key} tethered by player at position (${this.x}, ${this.y})`);
+        // No need to reset acceleration - preserves existing momentum
     }
 
     // Called when tether is detached (e.g., deposited or broken)

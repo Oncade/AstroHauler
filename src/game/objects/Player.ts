@@ -78,6 +78,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.tetheredObject = salvage;
         this.rangeIndicator.setVisible(false); // Hide indicator when tethered
         console.log('Player: Tether attached');
+        // No need to reset acceleration - allows thrust to continue working
     }
 
     detachTether() {
@@ -97,24 +98,32 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     // --- Movement Methods ---
     thrust() {
-        // Apply force in the direction the ship is facing using config
-        if (this.body?.velocity) {
+        // Create acceleration in the direction the ship is facing
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            const thrustVector = new Phaser.Math.Vector2();
             this.scene.physics.velocityFromRotation(
                 this.rotation - Math.PI / 2, // Adjust for sprite orientation
                 PlayerConfig.thrustForce,
-                (this.body.velocity as Phaser.Math.Vector2)
+                thrustVector
             );
+            
+            // Apply acceleration instead of directly setting velocity
+            this.body.setAcceleration(thrustVector.x, thrustVector.y);
         }
     }
     
-    // Apply variable thrust force in the direction the ship is facing
+    // Apply variable thrust force as acceleration in the direction the ship is facing
     thrustWithForce(force: number) {
-        if (this.body?.velocity) {
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            const thrustVector = new Phaser.Math.Vector2();
             this.scene.physics.velocityFromRotation(
                 this.rotation - Math.PI / 2, // Adjust for sprite orientation
                 force,
-                (this.body.velocity as Phaser.Math.Vector2)
+                thrustVector
             );
+            
+            // Apply acceleration instead of directly setting velocity
+            this.body.setAcceleration(thrustVector.x, thrustVector.y);
         }
     }
     
@@ -136,10 +145,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             thrustVector
         );
         
-        // Apply thrust to the current velocity
-        this.body.velocity.add(thrustVector);
+        // Apply acceleration instead of directly adding to velocity
+        this.body.setAcceleration(thrustVector.x, thrustVector.y);
         
-        // Ensure we don't exceed maximum velocity
+        // Ensure we don't exceed maximum velocity (still needed as a safety check)
         const speed = this.body.velocity.length();
         if (speed > PlayerConfig.maxVelocity) {
             this.body.velocity.scale(PlayerConfig.maxVelocity / speed);
@@ -158,12 +167,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.setAngularVelocity(0);
     }
 
-    stopMovement() {
-        if (this.body) {
-            this.setVelocity(0, 0);
-            this.setAngularVelocity(0);
+    // Remove stopMovement and replace with stopThrust which only stops acceleration
+    stopThrust() {
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            // Only reset acceleration, maintain current velocity/momentum
+            this.body.setAcceleration(0, 0);
         }
-        console.log('Player movement stopped');
+        console.log('Player thrust stopped, momentum maintained');
     }
 
     // --- Update Loop ---

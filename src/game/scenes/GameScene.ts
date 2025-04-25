@@ -517,6 +517,9 @@ export default class GameScene extends Phaser.Scene {
         } else if (this.isThrustButtonPressed) {
             // Thrust button - apply gradual thrust in the direction the ship is facing
             this.player.thrustWithForce(this.currentThrustForce);
+        } else {
+            // Stop applying acceleration when no thrust buttons are pressed
+            this.player.stopThrust();
         }
 
         // --- Handle Tether Key Press ---
@@ -542,15 +545,8 @@ export default class GameScene extends Phaser.Scene {
 
         // --- Update Tether --- (Only if active)
         if (this.activeTether) {
-            // Reset acceleration before applying tether forces each frame
-            if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
-                this.player.body.setAcceleration(0, 0);
-            }
-            const tetheredSalvage = this.activeTether.getAttachedSalvage();
-            if (tetheredSalvage.body instanceof Phaser.Physics.Arcade.Body) {
-                tetheredSalvage.body.setAcceleration(0, 0);
-            }
-
+            // Remove the acceleration reset that's canceling thrust
+            // Let tether forces add to the existing acceleration
             this.activeTether.update(delta);
         }
         
@@ -632,24 +628,10 @@ export default class GameScene extends Phaser.Scene {
         const maxDistanceSq = TetherConfig.maxAttachDistance * TetherConfig.maxAttachDistance;
 
         if (distanceSq <= maxDistanceSq) {
-            // Ensure bodies exist and reset acceleration before tethering
-            // Player body check
-            if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
-                this.player.body.setAcceleration(0, 0);
-            } else {
-                 console.warn('Scene: Player body missing during tether attempt.');
-                 return; // Cannot tether without player body
-            }
-
-            // Salvage body check (already checked in filter, but double-check for safety)
-            if (closestSalvage.body instanceof Phaser.Physics.Arcade.Body) {
-                closestSalvage.body.setAcceleration(0, 0);
-                this.activeTether = new Tether(this, this.player, closestSalvage);
-                console.log('Scene: Tether initiated by key press to nearest salvage.');
-            } else {
-                // This case should ideally not be reached due to the filter
-                console.warn('Scene: Closest salvage is missing Arcade Body despite filter.');
-            }
+            // No need to reset acceleration - this allows both objects to maintain their current momentum
+            // Create the tether without modifying current physics state
+            this.activeTether = new Tether(this, this.player, closestSalvage);
+            console.log('Scene: Tether initiated by key press to nearest salvage.');
         } else {
             console.log('Scene: Nearest eligible salvage is out of range.');
             // Optional: Play a failure sound/effect
@@ -1114,5 +1096,8 @@ export default class GameScene extends Phaser.Scene {
         
         // Reset thrust force
         this.currentThrustForce = 0;
+        
+        // Stop applying acceleration but maintain momentum
+        this.player.stopThrust();
     }
 } 

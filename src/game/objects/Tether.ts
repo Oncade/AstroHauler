@@ -148,7 +148,7 @@ export default class Tether {
         const stretchFactor = extension > 0 ? Math.min(extension / (TetherConfig.maxLength * 0.5), 1) : 0;
         this.updateStretchIndicator(stretchFactor);
 
-        if (extension > 0) { // Only apply force if tether is stretched
+        if (extension > 0) { // Only apply force if tether is stretched beyond maxLength
             // Calculate force direction (from salvage to player)
             this.tempVec.copy(this.player.body.center).subtract(this.salvage.body.center).normalize();
 
@@ -167,23 +167,25 @@ export default class Tether {
             const totalForce = this.springForce.add(dampingForce);
 
             // Apply forces to bodies (scaled by delta for acceleration)
-            // Scale force by inverse mass (or apply directly if mass handled by physics engine)
+            // Scale force by inverse mass (or apply directly if physics engine handles it)
             // Arcade physics uses acceleration, so scaling by delta and mass is appropriate
             const dt = delta / 1000; // Convert delta ms to seconds
 
             if (this.salvage.body instanceof Phaser.Physics.Arcade.Body) {
                 const salvageAccel = totalForce.clone().scale(1 / this.salvage.mass); // F=ma -> a=F/m
+                // Add to existing acceleration rather than replacing it
                 this.salvage.body.acceleration.add(salvageAccel);
             }
             if (this.player.body instanceof Phaser.Physics.Arcade.Body) {
                 const playerForce = totalForce.clone().scale(-1); // Equal and opposite force
                 // Assuming player mass is 1 for now, or get it from config/player properties
                 const playerAccel = playerForce.scale(1); // Player mass assumed 1
+                // Add to existing acceleration rather than replacing it
                 this.player.body.acceleration.add(playerAccel);
             }
-        } else {
-             // Optional: Add some drag or minimal force if length < minLength?
         }
+        // When extension <= 0, do nothing - no forces are applied when the tether is not stretched
+        // This ensures the tether only acts as a constraint when stretched, not as a constant force
     }
 
     getAttachedSalvage(): Salvage {

@@ -38,11 +38,11 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
 
 // Player Specific Config
 export const PlayerConfig = {
-    thrustForce: 175,       // Increased force for more responsiveness
+    thrustForce: 175,       // Reduced force for more gradual acceleration
     drag: 0,                // No drag in space
     angularDrag: 0,         // No angular drag in space
     angularVelocity: 150,   // Rotation speed
-    maxVelocity: 400,       // Increased maximum speed for space
+    maxVelocity: 400,       // Maximum speed cap
     textureKey: 'ship'
 };
 
@@ -77,9 +77,9 @@ export const TouchControlsConfig = {
         y: -150                 // Position from bottom edge (negative for bottom positioning)
     },
     thrustParameters: {
-        initialForce: 30,       // Initial thrust force when button is first pressed
-        maxForce: 175,          // Maximum thrust force when fully ramped up
-        rampUpTime: 1000,       // Time in ms to reach maximum thrust
+        initialForce: 20,       // Reduced initial thrust force
+        maxForce: 1000,          // Reduced maximum thrust to match thrustForce
+        rampUpTime: 1500,       // Longer ramp-up time for more gradual acceleration
         rampUpEase: 'Sine.easeInOut', // Easing function for thrust ramp-up
     },
     joystickDeadZone: 10,       // Deadzone in pixels for the joystick
@@ -100,7 +100,7 @@ export const TouchControlsConfig = {
 export const TetherConfig = {
     maxLength: 100,         // Maximum length before spring force applies (pixels)
     minLength: 20,          // Minimum length (optional, less critical for this implementation)
-    springConstant: 1,   // Stiffness of the tether spring (k)
+    springConstant: .1,   // Stiffness of the tether spring (k)
     damping: 0.001,         // Damping factor to reduce oscillations (c)
     lineWidth: 2,
     lineColor: 0x00ff00,     // Green tether line
