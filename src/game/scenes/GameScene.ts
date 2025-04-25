@@ -567,23 +567,37 @@ export default class GameScene extends Phaser.Scene {
         const depositZonePos = this.parentShip.getDepositZonePosition();
         const radius = ParentShipConfig.depositZoneRadius || 120;
 
+        // If the texture doesn't exist, create a simple circular texture
+        if (!this.textures.exists('deposit-zone-collider')) {
+            // Create a circular texture using render texture
+            const renderTexture = this.add.renderTexture(0, 0, radius * 2, radius * 2);
+            
+            // Draw the circle on a temporary graphics object
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xffffff, 0.3);  // Semi-transparent fill
+            graphics.fillCircle(radius, radius, radius);
+            graphics.lineStyle(4, 0xffff00, 0.8);
+            graphics.strokeCircle(radius, radius, radius);
+            
+            // Draw graphics to the render texture
+            renderTexture.draw(graphics, 0, 0);
+            
+            // Save as a new texture
+            renderTexture.saveTexture('deposit-zone-collider');
+            
+            // Clean up
+            renderTexture.destroy();
+            graphics.destroy();
+            
+            console.log('Created deposit-zone-collider texture');
+        }
+        
         // Create an invisible sprite to act as the deposit zone collider
         this.depositZone = this.physics.add.sprite(
             depositZonePos.x, 
             depositZonePos.y, 
             'deposit-zone-collider'
         );
-        
-        // If the texture doesn't exist, create a simple circular texture
-        if (!this.textures.exists('deposit-zone-collider')) {
-            const graphics = this.add.graphics();
-            graphics.fillStyle(0xffffff, 0.3);  // Semi-transparent fill
-            graphics.fillCircle(radius, radius, radius);
-            graphics.lineStyle(4, 0xffff00, 0.8);
-            graphics.strokeCircle(radius, radius, radius);
-            graphics.generateTexture('deposit-zone-collider', radius * 2, radius * 2);
-            graphics.destroy();
-        }
         
         // Set up the physics body
         this.depositZone.setCircle(radius)           // Make the hitbox circular

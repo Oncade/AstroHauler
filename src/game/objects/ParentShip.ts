@@ -65,7 +65,7 @@ export default class ParentShip extends Phaser.Physics.Arcade.Image { // Use Ima
                 fontStyle: 'bold'
             }
         ).setOrigin(0.5);
-        
+        /*
         // Add connecting line between ship and deposit zone
         const line = this.scene.add.graphics();
         line.lineStyle(3, 0x00ff00, 0.6);
@@ -73,34 +73,47 @@ export default class ParentShip extends Phaser.Physics.Arcade.Image { // Use Ima
         line.moveTo(this.x, this.y);
         line.lineTo(this.depositZonePosition.x, this.depositZonePosition.y);
         line.strokePath();
+        */
     }
     
     private createDepositIndicator() {
-        // Add a deposit indicator sprite above the deposit zone (not the ship)
+        // Check if the texture exists, create if not
+        if (!this.scene.textures.exists('deposit-arrow')) {
+            // Create a temporary graphics object
+            const tempGraphics = this.scene.add.graphics();
+            
+            // Draw the arrow
+            tempGraphics.fillStyle(0xffff00, 1);
+            tempGraphics.fillTriangle(0, -30, -20, 0, 20, 0);
+            tempGraphics.fillRect(-15, 0, 30, 20);
+            
+            // Create the texture from the graphics
+            try {
+                // Create a render texture first
+                const renderTexture = this.scene.add.renderTexture(0, 0, 40, 50);
+                
+                // Draw the graphics to the render texture
+                renderTexture.draw(tempGraphics, 20, 40);
+                
+                // Generate a texture from the render texture
+                renderTexture.saveTexture('deposit-arrow');
+                
+                // Clean up
+                renderTexture.destroy();
+                tempGraphics.destroy();
+                
+                console.log('Created deposit-arrow texture successfully');
+            } catch (e) {
+                console.error('Failed to create deposit-arrow texture:', e);
+            }
+        }
+        
+        // Now create the sprite with the generated texture
         this.depositIndicator = this.scene.add.sprite(
             this.depositZonePosition.x, 
             this.depositZonePosition.y - 80, 
             'deposit-arrow'
         );
-        
-        // If the sprite doesn't exist, create a temporary arrow with graphics
-        if (!this.scene.textures.exists('deposit-arrow')) {
-            const tempGraphics = this.scene.add.graphics();
-            tempGraphics.fillStyle(0xffff00, 1);
-            tempGraphics.fillTriangle(0, -30, -20, 0, 20, 0);
-            tempGraphics.fillRect(-15, 0, 30, 20);
-            
-            // Generate texture from graphics
-            tempGraphics.generateTexture('deposit-arrow', 40, 50);
-            tempGraphics.destroy();
-            
-            // Now create the sprite with the generated texture
-            this.depositIndicator = this.scene.add.sprite(
-                this.depositZonePosition.x, 
-                this.depositZonePosition.y - 80, 
-                'deposit-arrow'
-            );
-        }
         
         // Create a pulsing effect
         this.scene.tweens.add({
