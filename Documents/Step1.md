@@ -62,12 +62,16 @@ src/
 - Visualize tether as a line with proper tension representation **(Done - Week 2&3, Line drawn via Graphics with visual stretch indicators)**
 - Handle collision detection between tethered salvage and environment **(Partial - Week 2, Salvage collides with world/other salvage, explicit tether collision not implemented)**
 
-### 3. Salvage Collection
+### 3. Salvage Collection and Haul System
 
 - Create basic salvage item types with different mass properties **(Done - Week 2, Salvage class implemented with mass, value, and visual alpha cue)**
 - Implement logic for attaching salvage to player ship **(Done - Tether initiated via key press 't' when near salvage)**
 - Create the parent ship as a deposit point for collected salvage **(Done - Week 2, ParentShip class implemented and placed in GameScene)**
 - Implement a simple scoring system based on deposited salvage **(Done - Week 2, Score updated on deposit in GameScene)**
+- **(New)** Implement a "Haul" concept where each game session is a salvage run
+- **(New)** Create an exit zone where players can end their Haul and return to base
+- **(New)** Implement SpaceBucks persistence between Hauls using localStorage
+- **(New)** Update UI to show both current Haul score and total SpaceBucks
 
 ## Game Flow
 
@@ -75,16 +79,20 @@ src/
 +-----------------+     +-----------------+     +-----------------+ 
 | MainMenuScene   |---->| GameScene       |---->| GameOverScene   |
 | (Phaser UI)     |     | (Gameplay)      |     | (Phaser UI)     |
-| - Start Button  |     | - Exit Button   |     | - Restart Button|
-| - Settings (opt)|     | - Score Display |     | - Menu Button   |
+| - Start Button  |     | - Exit Zone     |     | - New Haul      |
+| - Settings (opt)|     | - Score Display |     | - Return to Base|
 +-----------------+     +-----------------+     +-----------------+
+                              |                        |
+                              v                        v
+                        [End Haul via]          [Total SpaceBucks 
+                        [Exit Zone]              saved between hauls]
 ```
-*(Initial flow implemented using Phaser Scenes, GameScene mechanics added)*
+*(Updated flow implemented to support the Haul concept)*
 
 ### Main Menu Scene
 
 - [X] Title and game logo (Text-based)
-- [X] Start Game button
+- [X] Start New Haul button
 - [ ] Settings button (minimal implementation for Phase 1) - *(Deferred)*
 - [ ] Animated background with space theme - *(Deferred)*
 
@@ -96,24 +104,29 @@ src/
 - [X] Simple level with scattered salvage items *(Random spawning implemented Week 2)*
 - [X] Parent ship as deposit point *(Implemented Week 2)*
 - [X] Basic physics and tether mechanics *(Zero-drag space physics implemented for realistic momentum preservation)*
+- [X] **(New)** Exit zone for ending the current Haul
+- [X] **(New)** SpaceBucks persistence between Hauls
 - [X] Minimal HUD showing:
-  - [X] Current score (Implemented Week 2)
+  - [X] Current Haul score (Implemented Week 2)
+  - [X] Total SpaceBucks (Implemented Week 3)
   - [X] Exit button (returns to main menu)
   - [ ] Basic ship status indicators *(Deferred)*
 
 ### Game Over Scene
 
-- [X] Display final score (Placeholder logic)
-- [X] Option to restart the game
-- [X] Option to return to main menu
-- [ ] Brief animation or effect to signify game ending *(Deferred)*
+- [X] Display Haul complete message
+- [X] Display SpaceBucks earned in the Haul
+- [X] Display total SpaceBucks
+- [X] Option to start a new Haul
+- [X] Option to return to base (main menu)
+- [ ] Brief animation or effect to signify Haul ending *(Deferred)*
 
 ## React-Phaser Integration
 
 - [X] Use EventBus for communication between React components and Phaser scenes *(Setup in template, placeholder components created)*
 - [X] Emit `current-scene-ready` events from each Phaser scene *(Implemented in created scenes)*
 - [X] Emit `score-updated` event from GameScene *(Implemented Week 2)*
-- [ ] Implement UI overlays in React that respond to game state *(Placeholders created, actual implementation deferred)*
+- [X] Update React UI components to display both current Haul score and total SpaceBucks
 - [ ] Handle responsive design for different device sizes *(Partially handled by Phaser config, React UI needs testing)*
 
 ## Asset Requirements (Minimum Viable Product - Phase 1, Week 1 & 2 Focus)
@@ -124,6 +137,7 @@ src/
 - [X] 1 salvage item sprite (`salvage_1.png`)
 - [X] 3-5 different salvage item sprites *(Updated with 7 assets: `salvage_1.png` - `salvage_7.png`)*
 - [X] Simple space background (`Starfield.png`)
+- [X] **(New)** Exit zone visual indicator
 - [X] UI elements (buttons, score display, etc.) *(Text-based placeholders implemented)*
 
 ### Audio
@@ -160,6 +174,9 @@ src/
 - [X] **(New)** Implement touch controls with virtual joystick and tether button
 - [X] **(New)** Implement zero-drag space physics for realistic momentum preservation when tether is disconnected
 - [X] **(New)** Add enhanced visual feedback for tether with stretch indicators and salvage highlighting
+- [X] **(New)** Implement "Haul" concept with exit zone for ending current Haul
+- [X] **(New)** Add SpaceBucks persistence between Hauls using localStorage
+- [X] **(New)** Update UI to display both current Haul score and total SpaceBucks
 
 ### Week 4: Polishing and Testing
 - [ ] Refine physics and movement feel (based on playtesting)
@@ -167,6 +184,8 @@ src/
 - [ ] Integrate final placeholder art and sound *(If available)*
 - [ ] Test on different devices and input methods (focus on keyboard for Phase 1)
 - [ ] Fix bugs and optimize performance (consider object pooling for salvage later)
+- [ ] Test SpaceBucks persistence between Hauls
+- [ ] Refine exit zone user experience
 
 ## Technical Considerations
 
@@ -186,6 +205,10 @@ src/
 - [ ] Implement object pooling for frequently created/destroyed objects *(Consider for Salvage in Week 4/Phase 2)*
 - [ ] Ensure responsive design works on various screen sizes *(Basic setup, needs testing)*
 
+### Data Persistence
+- [X] **(New)** Use localStorage to persist SpaceBucks between Hauls
+- [X] **(New)** Implement loading/saving of player progress
+
 ## Next Steps After Phase 1
 
 - Enhance tether physics with more realistic behavior (potentially explore Matter.js)
@@ -193,15 +216,20 @@ src/
 - Implement the upgrade system for ship improvements
 - Create more diverse salvage types and obstacles
 - Refine art style and add more visual polish
+- Expand the base (MainMenu) to allow SpaceBucks spending on upgrades
 
 ## Conclusion
 
-This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects, keyboard controls, basic UI, and the initial salvage collection loop. **The tether system has been updated to use a key press ('t') for activation/deactivation, targeting the nearest salvage within a configurable range, which is now visually indicated.** 
+This implementation plan provides a roadmap for developing Phase 1 of AstroHauler. Weeks 1 and 2 tasks are complete, establishing the project structure, core objects, keyboard controls, basic UI, and the initial salvage collection loop. **The tether system has been updated to use a key press ('t') for activation/deactivation, targeting the nearest salvage within a configurable range, which is now visually indicated.**
 
 **Week 3 updates include:**
 1. Implementing zero-drag space physics for proper momentum preservation when tether is disconnected
 2. Adding enhanced visual feedback for the tether with stretch indicators and salvage highlighting
 3. Implementing touch controls with a virtual joystick and tether button
 4. Ensuring player and salvage maintain their velocity when the tether is disconnected
+5. Implementing the "Haul" concept where each game session is a salvage mission
+6. Adding an exit zone where players can end their current Haul and return to base
+7. Implementing SpaceBucks persistence between Hauls using localStorage
+8. Updating UI to show both current Haul score and total SpaceBucks
 
 The next step (Week 4) focuses on polishing and testing the game mechanics, refining the physics feel, and optimizing performance across different devices. 

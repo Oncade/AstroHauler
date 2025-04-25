@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 
 interface GameUIProps {
     score: number;
+    totalSpaceBucks: number;
     // Add other UI elements as needed (e.g., health, fuel, tether status)
 }
 
-export const GameUI: React.FC<GameUIProps> = ({ score }) => {
+export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
     const [showHelp, setShowHelp] = useState(true);
     const [showInstructions, setShowInstructions] = useState(false);
     
@@ -20,11 +21,11 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
         return () => clearTimeout(timer);
     }, []);
     
-    console.log('React GameUI component rendered with score:', score);
+    console.log('React GameUI component rendered with score:', score, 'total:', totalSpaceBucks);
     
     return (
         <div>
-            {/* Score Display */}
+            {/* Score and SpaceBucks Display */}
             <div style={{
                 position: 'absolute',
                 top: '10px',
@@ -36,7 +37,10 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
                 fontFamily: 'Arial, sans-serif',
                 fontSize: '24px'
             }}>
-                SpaceBucks: {score}
+                <div>Current Haul: <span style={{ color: '#00ff00' }}>{score}</span></div>
+                <div style={{ fontSize: '16px', marginTop: '5px' }}>
+                    Total SpaceBucks: <span style={{ color: '#ffff00' }}>{totalSpaceBucks}</span>
+                </div>
             </div>
             
             {/* Instructions Button */}
@@ -92,6 +96,13 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
                         <li>Watch for the <span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span> message</li>
                     </ol>
                     
+                    <h4 style={{ color: '#ffff00', marginBottom: '5px' }}>End Your Haul:</h4>
+                    <ol style={{ marginTop: '5px', paddingLeft: '20px' }}>
+                        <li>Fly into the <span style={{ color: '#ff5555' }}>RED EXIT ZONE</span> to complete your haul</li>
+                        <li>Your SpaceBucks will be added to your total</li>
+                        <li>Return to base to spend SpaceBucks on upgrades</li>
+                    </ol>
+                    
                     <div style={{ borderTop: '1px solid #444', marginTop: '10px', paddingTop: '10px' }}>
                         <p style={{ color: '#ff9900', margin: 0 }}>Tip: The deposit zone will turn yellow when salvage is ready to be deposited!</p>
                     </div>
@@ -136,6 +147,9 @@ export const GameUI: React.FC<GameUIProps> = ({ score }) => {
                         <li><b>Move salvage FULLY INTO</b> the deposit zone</li>
                         <li>Watch for "<span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span>"</li>
                     </ol>
+                    <p style={{ marginTop: '10px', color: '#ff5555'}}>
+                        End your haul by flying into the RED EXIT ZONE
+                    </p>
                     <button 
                         onClick={() => setShowHelp(false)}
                         style={{

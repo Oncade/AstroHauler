@@ -3,10 +3,13 @@ import { EventBus } from '../EventBus';
 
 interface GameOverData {
     score: number;
+    totalSpaceBucks: number;
 }
 
 export default class GameOverScene extends Phaser.Scene {
     private finalScore: number = 0;
+    private totalSpaceBucks: number = 0;
+    private hasEmittedReady: boolean = false;
 
     constructor() {
         super('GameOverScene');
@@ -15,6 +18,12 @@ export default class GameOverScene extends Phaser.Scene {
     init(data: GameOverData) {
         console.log('GameOverScene init with data:', data);
         this.finalScore = data.score !== undefined ? data.score : 0;
+        this.totalSpaceBucks = data.totalSpaceBucks !== undefined ? data.totalSpaceBucks : 0;
+        this.hasEmittedReady = false;
+        
+        // Store data in registry for React components to access
+        this.registry.set('score', this.finalScore);
+        this.registry.set('totalSpaceBucks', this.totalSpaceBucks);
     }
 
     create() {
@@ -24,22 +33,29 @@ export default class GameOverScene extends Phaser.Scene {
         // Background
         this.cameras.main.setBackgroundColor('#400000'); // Dark red background
 
-        // Game Over Text
-        this.add.text(width * 0.5, height * 0.3, 'GAME OVER', {
+        // Haul Complete Text
+        this.add.text(width * 0.5, height * 0.3, 'HAUL COMPLETE', {
             font: 'bold 64px Arial',
-            color: '#ff0000',
+            color: '#ff7700',
             align: 'center'
         }).setOrigin(0.5);
 
-        // Final Score Text
-        this.add.text(width * 0.5, height * 0.45, `Final Score: ${this.finalScore}` , {
+        // Haul Score Text
+        this.add.text(width * 0.5, height * 0.45, `SpaceBucks from haul: ${this.finalScore}` , {
             font: '32px Arial',
             color: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
+        
+        // Total SpaceBucks Text
+        this.add.text(width * 0.5, height * 0.53, `Total SpaceBucks: ${this.totalSpaceBucks}` , {
+            font: '36px Arial',
+            color: '#ffff00',
+            align: 'center'
+        }).setOrigin(0.5);
 
-        // Restart Button
-        const restartButton = this.add.text(width * 0.5, height * 0.6, '[ Restart ]', {
+        // Return to Command Center Button
+        const commandCenterButton = this.add.text(width * 0.5, height * 0.65, '[ Return to Command Center ]', {
             font: '28px Arial',
             color: '#ffff00',
             backgroundColor: '#555555',
@@ -48,15 +64,15 @@ export default class GameOverScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setInteractive();
 
-        restartButton.on('pointerdown', () => {
-            console.log('Restart button clicked - Starting GameScene');
-            this.scene.start('GameScene');
+        commandCenterButton.on('pointerdown', () => {
+            console.log('Returning to Command Center');
+            this.scene.start('CommandCenterScene');
         });
-        restartButton.on('pointerover', () => restartButton.setStyle({ color: '#000000', backgroundColor: '#ffff00' }));
-        restartButton.on('pointerout', () => restartButton.setStyle({ color: '#ffff00', backgroundColor: '#555555' }));
+        commandCenterButton.on('pointerover', () => commandCenterButton.setStyle({ color: '#000000', backgroundColor: '#ffff00' }));
+        commandCenterButton.on('pointerout', () => commandCenterButton.setStyle({ color: '#ffff00', backgroundColor: '#555555' }));
 
-        // Main Menu Button
-        const menuButton = this.add.text(width * 0.5, height * 0.75, '[ Main Menu ]', {
+        // Return to Main Menu Button
+        const menuButton = this.add.text(width * 0.5, height * 0.8, '[ Return to Base ]', {
             font: '28px Arial',
             color: '#ffffff',
             backgroundColor: '#333333',
@@ -66,14 +82,17 @@ export default class GameOverScene extends Phaser.Scene {
         .setInteractive();
 
         menuButton.on('pointerdown', () => {
-            console.log('Main Menu button clicked - Starting MainMenuScene');
+            console.log('Returning to base - MainMenuScene');
             this.scene.start('MainMenuScene');
         });
         menuButton.on('pointerover', () => menuButton.setStyle({ color: '#000000', backgroundColor: '#ffffff' }));
         menuButton.on('pointerout', () => menuButton.setStyle({ color: '#ffffff', backgroundColor: '#333333' }));
 
-
-        // Emit the ready event for React bridge
-        EventBus.emit('current-scene-ready', this);
+        // Emit the ready event for React bridge - only emit once
+        if (!this.hasEmittedReady) {
+            console.log('GameOverScene emitting current-scene-ready event');
+            EventBus.emit('current-scene-ready', this);
+            this.hasEmittedReady = true;
+        }
     }
 } 

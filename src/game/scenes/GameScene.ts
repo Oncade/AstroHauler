@@ -24,9 +24,11 @@ export default class GameScene extends Phaser.Scene {
     private salvageGroup!: Phaser.Physics.Arcade.Group;
     private activeTether: Tether | null = null;
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
+    private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
 
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
+    private totalSpaceBucks: number = 0;
 
     private keys: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     
@@ -53,7 +55,10 @@ export default class GameScene extends Phaser.Scene {
         this.isTouchDevice = DeviceDetection.isTouchDevice();
         console.log(`Touch device detected: ${this.isTouchDevice}`);
 
-        // Reset score on scene start
+        // Load persisted total SpaceBucks if available
+        this.loadTotalSpaceBucks();
+        
+        // Reset current haul score on scene start
         this.score = 0;
 
         // Set world bounds (adjust size if needed)
@@ -74,6 +79,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Create a separate physics body for the deposit zone
         this.createDepositZoneCollider();
+        
+        // Create exit zone for ending the haul
+        this.createExitZoneCollider();
 
         // Create Salvage Group
         this.salvageGroup = this.physics.add.group({
@@ -146,7 +154,7 @@ export default class GameScene extends Phaser.Scene {
         .setScrollFactor(0); // Keep UI fixed
 
         exitButton.on('pointerdown', () => {
-            this.scene.start('MainMenuScene');
+            this.endHaul();
         });
         exitButton.on('pointerover', () => exitButton.setStyle({ backgroundColor: '#ff0000', color: '#000' }));
         exitButton.on('pointerout', () => exitButton.setStyle({ backgroundColor: '#555555', color: '#ff0000' }));
@@ -451,16 +459,9 @@ export default class GameScene extends Phaser.Scene {
 
             this.activeTether.update(delta);
         }
-
-        // --- Game Over Condition ---
-        if (this.score >= 100) { // Simple game over condition: score reaches 100
-            console.log('Game Over condition met. Starting GameOverScene.');
-            if (this.activeTether) { // Clean up tether before changing scene
-                this.activeTether.destroy();
-                this.activeTether = null;
-            }
-            this.scene.start('GameOverScene', { score: this.score });
-        }
+        
+        // Check for player in exit zone
+        this.checkPlayerExitZoneOverlap();
     }
     
     // Helper method to smoothly rotate the ship towards a target angle
@@ -763,5 +764,218 @@ export default class GameScene extends Phaser.Scene {
         
         // Destroy the salvage
         salvage.destroy();
+    }
+
+    // Helper method to load total SpaceBucks from localStorage
+    loadTotalSpaceBucks() {
+        const savedBucks = localStorage.getItem('totalSpaceBucks');
+        if (savedBucks) {
+            this.totalSpaceBucks = parseInt(savedBucks, 10);
+            console.log(`Loaded total SpaceBucks: ${this.totalSpaceBucks}`);
+        } else {
+            this.totalSpaceBucks = 0;
+            console.log('No saved SpaceBucks found, starting fresh');
+        }
+    }
+    
+    // Helper method to save total SpaceBucks to localStorage
+    saveTotalSpaceBucks() {
+        localStorage.setItem('totalSpaceBucks', this.totalSpaceBucks.toString());
+        console.log(`Saved total SpaceBucks: ${this.totalSpaceBucks}`);
+    }
+    
+    // End the current haul and save progress
+    endHaul() {
+        console.log('Ending haul. Adding score to total SpaceBucks.');
+        // Add current score to total
+        this.totalSpaceBucks += this.score;
+        
+        // Save to localStorage
+        this.saveTotalSpaceBucks();
+        
+        // Clean up tether before changing scene
+        if (this.activeTether) {
+            this.activeTether.destroy();
+            this.activeTether = null;
+        }
+        
+        // Pass both current score and total to GameOverScene
+        this.scene.start('GameOverScene', { 
+            score: this.score,
+            totalSpaceBucks: this.totalSpaceBucks
+        });
+    }
+    
+    // Create the exit zone for ending the current haul
+    createExitZoneCollider() {
+        // Position the exit zone on the opposite side of the parent ship
+        const exitZonePos = {
+            x: this.parentShip.x + 300, // Offset from parent ship
+            y: this.parentShip.y 
+        };
+        const radius = 100; // Size of exit zone
+
+        // If the texture doesn't exist, create a circular texture
+        if (!this.textures.exists('exit-zone-collider')) {
+            // Create a circular texture
+            const renderTexture = this.add.renderTexture(0, 0, radius * 2, radius * 2);
+            
+            // Draw the circle
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xff0000, 0.3);  // Semi-transparent red
+            graphics.fillCircle(radius, radius, radius);
+            graphics.lineStyle(4, 0xff3300, 0.8); // Orange-red outline
+            graphics.strokeCircle(radius, radius, radius);
+            
+            // Draw text in the center
+            const textObject = this.add.text(radius, radius, 'EXIT', {
+                fontSize: '24px',
+                color: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Draw graphics to the render texture
+            renderTexture.draw(graphics, 0, 0);
+            renderTexture.draw(textObject, radius, radius);
+            
+            // Save as a new texture
+            renderTexture.saveTexture('exit-zone-collider');
+            
+            // Clean up
+            renderTexture.destroy();
+            graphics.destroy();
+            textObject.destroy();
+            
+            console.log('Created exit-zone-collider texture');
+        }
+        
+        // Create an exit zone sprite
+        this.exitZone = this.physics.add.sprite(
+            exitZonePos.x, 
+            exitZonePos.y, 
+            'exit-zone-collider'
+        );
+        
+        // Set up the physics body
+        this.exitZone.setCircle(radius)
+                    .setVisible(true)
+                    .setImmovable(true)
+                    .setAlpha(0.5);
+                    
+        // Make it a sensor
+        if (this.exitZone.body) {
+            this.exitZone.body.setAllowGravity(false);
+            (this.exitZone.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(false);
+            const body = this.exitZone.body as Phaser.Physics.Arcade.Body;
+            body.checkCollision.up = false;
+            body.checkCollision.down = false;
+            body.checkCollision.left = false;
+            body.checkCollision.right = false;
+        }
+        
+        // Add label for the exit zone
+        this.add.text(exitZonePos.x, exitZonePos.y - radius - 20, 'END HAUL', {
+            fontSize: '18px',
+            color: '#ff5555',
+            backgroundColor: '#333333',
+            padding: { left: 5, right: 5, top: 2, bottom: 2 }
+        }).setOrigin(0.5).setScrollFactor(1);
+    }
+    
+    // Check if player is in the exit zone
+    checkPlayerExitZoneOverlap() {
+        if (!this.player || !this.exitZone) return;
+        
+        const playerBounds = this.player.getBounds();
+        const exitZoneBounds = this.exitZone.getBounds();
+        
+        const boundsOverlap = Phaser.Geom.Intersects.RectangleToRectangle(
+            exitZoneBounds,
+            playerBounds
+        );
+        
+        if (boundsOverlap) {
+            // Player is in exit zone, end the haul
+            this.showExitPrompt();
+        }
+    }
+    
+    // Show exit confirmation when player enters exit zone
+    showExitPrompt() {
+        // Check if prompt already exists to prevent duplicates
+        if (this.children.getByName('exitPrompt')) return;
+        
+        const { width, height } = this.scale;
+        
+        // Create prompt container
+        const promptBg = this.add.rectangle(
+            width / 2, 
+            height / 2, 
+            400, 
+            200, 
+            0x000000, 
+            0.8
+        ).setScrollFactor(0).setDepth(1000).setName('exitPrompt');
+        
+        const promptText = this.add.text(
+            width / 2, 
+            height / 2 - 40, 
+            'End this haul and return to base?', 
+            {
+                fontSize: '24px',
+                color: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        
+        const confirmButton = this.add.text(
+            width / 2 - 80, 
+            height / 2 + 30, 
+            '[ Yes ]', 
+            {
+                fontSize: '24px',
+                color: '#00ff00',
+                backgroundColor: '#333333',
+                padding: { left: 10, right: 10, top: 5, bottom: 5 }
+            }
+        ).setOrigin(0.5)
+         .setScrollFactor(0)
+         .setDepth(1001)
+         .setInteractive();
+        
+        const cancelButton = this.add.text(
+            width / 2 + 80, 
+            height / 2 + 30, 
+            '[ No ]', 
+            {
+                fontSize: '24px',
+                color: '#ff0000',
+                backgroundColor: '#333333',
+                padding: { left: 10, right: 10, top: 5, bottom: 5 }
+            }
+        ).setOrigin(0.5)
+         .setScrollFactor(0)
+         .setDepth(1001)
+         .setInteractive();
+        
+        // Button event handlers
+        confirmButton.on('pointerdown', () => {
+            this.endHaul();
+        });
+        
+        cancelButton.on('pointerdown', () => {
+            // Remove the prompt elements
+            promptBg.destroy();
+            promptText.destroy();
+            confirmButton.destroy();
+            cancelButton.destroy();
+        });
+        
+        // Add hover effects
+        confirmButton.on('pointerover', () => confirmButton.setStyle({ backgroundColor: '#007700' }));
+        confirmButton.on('pointerout', () => confirmButton.setStyle({ backgroundColor: '#333333' }));
+        
+        cancelButton.on('pointerover', () => cancelButton.setStyle({ backgroundColor: '#770000' }));
+        cancelButton.on('pointerout', () => cancelButton.setStyle({ backgroundColor: '#333333' }));
     }
 } 
