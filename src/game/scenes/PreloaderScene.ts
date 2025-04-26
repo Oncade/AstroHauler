@@ -77,6 +77,9 @@ export default class PreloaderScene extends Phaser.Scene {
         this.load.image('joystick-inner', 'assets/ui/joystick-inner.png');
         this.load.image('tether-button', 'assets/ui/tether-button.png');
         this.load.image('thrust-button', 'assets/ui/thrust-button.png');
+        
+        // Load particle effects
+        this.load.image('thruster_particle', 'assets/vfx/thruster_particle.png');
 
         // Placeholder for audio assets (Week 4)
         // this.load.audio('thruster', 'assets/audio/thruster.wav');

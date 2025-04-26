@@ -6,6 +6,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     public isTethered: boolean = false;
     public tetheredObject: Salvage | null = null;
     private rangeIndicator: Phaser.GameObjects.Graphics; // Add range indicator graphic
+    private thrusterParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, PlayerConfig.textureKey); // Use textureKey from config
@@ -28,7 +29,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Start the pulsing animation for better visibility on touch screens
         this.startPulseAnimation();
 
+        // Create thruster particles
+        this.createThrusterParticles();
+
         console.log('Player created using config');
+    }
+    
+    // Create thruster particle emitter
+    private createThrusterParticles(): void {
+        // Create the particle emitter directly
+        this.thrusterParticles = this.scene.add.particles(0, 0, 'thruster_particle', {
+            speed: { min: 60, max: 120 },
+            scale: { start: 0.5, end: 0 },
+            alpha: { start: 0.7, end: 0 },
+            lifespan: { min: 200, max: 400 },
+            blendMode: Phaser.BlendModes.ADD,
+            tint: [0xffff00, 0xff8800, 0xff4400], // Yellow to orange to red
+            frequency: 30,
+            angle: 90, // Base angle - will be adjusted during runtime
+            emitting: false, // Start disabled
+            //depth: this.depth - 1 // Position below the player for correct render order
+        });
     }
     
     // Create an enhanced range indicator with better visibility for touch screens
@@ -109,6 +130,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             
             // Apply acceleration instead of directly setting velocity
             this.body.setAcceleration(thrustVector.x, thrustVector.y);
+            
+            // Start thruster particles
+            this.startThrusterEffect();
         }
     }
     
@@ -124,7 +148,21 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             
             // Apply acceleration instead of directly setting velocity
             this.body.setAcceleration(thrustVector.x, thrustVector.y);
+            
+            // Start thruster particles with intensity based on force
+            this.startThrusterEffect();
+            
+            // Adjust particle frequency based on thrust force
+            const normalizedForce = Math.min(force / PlayerConfig.thrustForce, 1);
+            const baseFrequency = 40; // Higher number = fewer particles
+            const frequency = baseFrequency / Math.max(normalizedForce, 0.2);
+            this.thrusterParticles.setFrequency(frequency);
         }
+    }
+    
+    // Start thruster particle effect
+    private startThrusterEffect(): void {
+        this.thrusterParticles.start();
     }
     
     // New method for directional thrust based on touch input
@@ -147,6 +185,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         
         // Apply acceleration instead of directly adding to velocity
         this.body.setAcceleration(thrustVector.x, thrustVector.y);
+        
+        // Start thruster particles
+        this.startThrusterEffect();
         
         // Ensure we don't exceed maximum velocity (still needed as a safety check)
         const speed = this.body.velocity.length();
@@ -173,14 +214,36 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             // Only reset acceleration, maintain current velocity/momentum
             this.body.setAcceleration(0, 0);
         }
+        
+        // Stop thruster particles
+        this.thrusterParticles.stop();
+        
         console.log('Player thrust stopped, momentum maintained');
     }
 
     // --- Update Loop ---
     preUpdate(time: number, delta: number) {
         super.preUpdate(time, delta);
+        
         // Update the range indicator's position to follow the player
         this.rangeIndicator.setPosition(this.x, this.y);
+        
+        // Update thruster position and angle
+        if (this.thrusterParticles) {
+            // Calculate position behind the ship based on current rotation
+            const offsetDistance = 20; // Pixels behind the ship
+            const emitterX = this.x - Math.cos(this.rotation - Math.PI/2) * offsetDistance;
+            const emitterY = this.y - Math.sin(this.rotation - Math.PI/2) * offsetDistance;
+            
+            // Position the emitter at the back of the ship
+            this.thrusterParticles.setPosition(emitterX, emitterY);
+            
+            // Angle the particles opposite to the ship direction (ship points up at rotation 0)
+            const emitterAngle = Phaser.Math.RadToDeg(this.rotation) + 90;
+            
+            // Set the emitter angle (single value, not a range)
+            this.thrusterParticles.setEmitterAngle(emitterAngle);
+        }
     }
 
     // Optional: Method to apply force from tether
@@ -199,6 +262,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.scene) {
             this.scene.tweens.killTweensOf(this.rangeIndicator);
         }
+        
+        // Clean up the thruster emitter
+        if (this.thrusterParticles) {
+            this.thrusterParticles.stop();
+            this.thrusterParticles.destroy();
+        }
+        
         this.rangeIndicator.destroy();
         super.destroy(fromScene);
     }
