@@ -18,7 +18,7 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: './',
+    base: 'https://oncade.github.io/phaser_integration/',
     plugins: [
         react(),
         phasermsg()
