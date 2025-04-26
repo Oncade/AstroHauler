@@ -78,7 +78,7 @@ export const TouchControlsConfig = {
     },
     thrustParameters: {
         initialForce: 20,       // Reduced initial thrust force
-        maxForce: 1000,          // Reduced maximum thrust to match thrustForce
+        maxForce: 100,          // Reduced maximum thrust to match thrustForce
         rampUpTime: 1500,       // Longer ramp-up time for more gradual acceleration
         rampUpEase: 'Sine.easeInOut', // Easing function for thrust ramp-up
     },
