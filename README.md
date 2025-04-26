@@ -37,6 +37,48 @@ The local development server runs on `http://localhost:8080` by default. Please 
 
 Once the server is running you can edit any of the files in the `src` folder. Vite will automatically recompile your code and then reload the browser.
 
+## Game Controls
+
+### Keyboard Controls
+- **W** - Thrust forward
+- **A** - Rotate left
+- **D** - Rotate right
+- **T** - Toggle tether (attach/detach)
+
+### Touch Controls
+The game automatically detects touch devices and displays touch controls:
+
+- **Virtual Joystick** - Located in the lower-left corner of the screen:
+  - Drag in any direction: Ship will rotate to face that direction
+  - Dragging further from center increases rotation speed
+  - A direction indicator arrow shows the rotation direction
+
+- **Tether Button** - Located in the lower-right corner of the screen:
+  - Tap to toggle tether (attach/detach)
+  - Green when tether is active
+  - White when tether is inactive
+
+- **Thrust Button** - Located next to the tether button:
+  - Press and hold to apply thrust in the direction the ship is facing
+  - Thrust gradually increases while the button is held down
+  - Release to stop applying thrust
+
+Touch controls are fully configurable in `src/game/config/GameConfig.ts` under the `TouchControlsConfig` section.
+
+### Generating Touch Control Assets
+The game requires the following UI assets for touch controls:
+- `public/assets/ui/joystick-outer.png` - The outer circle for the virtual joystick
+- `public/assets/ui/joystick-inner.png` - The inner knob for the virtual joystick
+- `public/assets/ui/tether-button.png` - The tether toggle button
+- `public/assets/ui/thrust-button.png` - The thrust button for applying forward thrust
+
+To generate placeholder assets:
+1. Open `public/assets/ui/generate-touch-assets.html` in your browser
+2. Click the "Download" buttons for each asset
+3. Move the downloaded images to the `public/assets/ui/` directory
+
+You can replace these placeholder assets with your own custom graphics as needed.
+
 ## Template Project Structure
 
 We have provided a default project structure to get you started. This is as follows:

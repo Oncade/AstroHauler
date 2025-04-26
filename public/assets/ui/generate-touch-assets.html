@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touch Control Asset Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        .asset-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Touch Control Asset Generator</h1>
+    <p>This page generates placeholder assets for the touch controls in the game. Click the buttons below to download each asset.</p>
+    
+    <div class="asset-container">
+        <h2>Joystick Outer</h2>
+        <canvas id="joystickOuter" width="200" height="200"></canvas>
+        <button onclick="downloadCanvas('joystickOuter', 'joystick-outer.png')">Download Joystick Outer</button>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Joystick Inner</h2>
+        <canvas id="joystickInner" width="100" height="100"></canvas>
+        <button onclick="downloadCanvas('joystickInner', 'joystick-inner.png')">Download Joystick Inner</button>
+    </div>
+    
+    <div class="asset-container">
+        <h2>Tether Button</h2>
+        <canvas id="tetherButton" width="200" height="200"></canvas>
+        <button onclick="downloadCanvas('tetherButton', 'tether-button.png')">Download Tether Button</button>
+    </div>
+    
+    <script>
+        // Draw joystick outer circle
+        const joystickOuter = document.getElementById('joystickOuter');
+        const joystickOuterCtx = joystickOuter.getContext('2d');
+        
+        // Clear with transparent background
+        joystickOuterCtx.clearRect(0, 0, joystickOuter.width, joystickOuter.height);
+        
+        // Draw outer ring with gradient
+        const centerX = joystickOuter.width / 2;
+        const centerY = joystickOuter.height / 2;
+        const radius = 90;
+        
+        // Create radial gradient
+        const gradient = joystickOuterCtx.createRadialGradient(
+            centerX, centerY, radius - 15,
+            centerX, centerY, radius
+        );
+        gradient.addColorStop(0, 'rgba(150, 150, 150, 0.7)');
+        gradient.addColorStop(1, 'rgba(80, 80, 80, 0.5)');
+        
+        // Draw outer circle
+        joystickOuterCtx.beginPath();
+        joystickOuterCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        joystickOuterCtx.lineWidth = 5;
+        joystickOuterCtx.strokeStyle = 'rgba(200, 200, 200, 0.9)';
+        joystickOuterCtx.fillStyle = gradient;
+        joystickOuterCtx.fill();
+        joystickOuterCtx.stroke();
+        
+        // Draw inner circle
+        joystickOuterCtx.beginPath();
+        joystickOuterCtx.arc(centerX, centerY, radius - 20, 0, 2 * Math.PI);
+        joystickOuterCtx.lineWidth = 2;
+        joystickOuterCtx.strokeStyle = 'rgba(220, 220, 220, 0.8)';
+        joystickOuterCtx.stroke();
+        
+        // Draw joystick inner button
+        const joystickInner = document.getElementById('joystickInner');
+        const joystickInnerCtx = joystickInner.getContext('2d');
+        
+        // Clear with transparent background
+        joystickInnerCtx.clearRect(0, 0, joystickInner.width, joystickInner.height);
+        
+        // Draw inner button with gradient
+        const innerCenterX = joystickInner.width / 2;
+        const innerCenterY = joystickInner.height / 2;
+        const innerRadius = 40;
+        
+        // Create radial gradient
+        const innerGradient = joystickInnerCtx.createRadialGradient(
+            innerCenterX, innerCenterY, innerRadius - 15,
+            innerCenterX, innerCenterY, innerRadius
+        );
+        innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        innerGradient.addColorStop(1, 'rgba(200, 200, 200, 0.8)');
+        
+        // Draw button
+        joystickInnerCtx.beginPath();
+        joystickInnerCtx.arc(innerCenterX, innerCenterY, innerRadius, 0, 2 * Math.PI);
+        joystickInnerCtx.fillStyle = innerGradient;
+        joystickInnerCtx.fill();
+        joystickInnerCtx.lineWidth = 2;
+        joystickInnerCtx.strokeStyle = 'rgba(180, 180, 180, 0.7)';
+        joystickInnerCtx.stroke();
+        
+        // Draw tether button
+        const tetherButton = document.getElementById('tetherButton');
+        const tetherButtonCtx = tetherButton.getContext('2d');
+        
+        // Clear with transparent background
+        tetherButtonCtx.clearRect(0, 0, tetherButton.width, tetherButton.height);
+        
+        // Draw button with gradient
+        const buttonCenterX = tetherButton.width / 2;
+        const buttonCenterY = tetherButton.height / 2;
+        const buttonRadius = 80;
+        
+        // Create radial gradient
+        const buttonGradient = tetherButtonCtx.createRadialGradient(
+            buttonCenterX, buttonCenterY, buttonRadius - 30,
+            buttonCenterX, buttonCenterY, buttonRadius
+        );
+        buttonGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+        buttonGradient.addColorStop(1, 'rgba(200, 200, 200, 0.8)');
+        
+        // Draw button
+        tetherButtonCtx.beginPath();
+        tetherButtonCtx.arc(buttonCenterX, buttonCenterY, buttonRadius, 0, 2 * Math.PI);
+        tetherButtonCtx.fillStyle = buttonGradient;
+        tetherButtonCtx.fill();
+        tetherButtonCtx.lineWidth = 4;
+        tetherButtonCtx.strokeStyle = 'rgba(150, 150, 150, 0.8)';
+        tetherButtonCtx.stroke();
+        
+        // Draw chain link icon
+        tetherButtonCtx.strokeStyle = 'rgba(80, 80, 80, 0.9)';
+        tetherButtonCtx.lineWidth = 8;
+        
+        // Draw first chain link
+        tetherButtonCtx.beginPath();
+        tetherButtonCtx.ellipse(
+            buttonCenterX - 15, 
+            buttonCenterY, 
+            25, 15, 
+            0, 0, 2 * Math.PI
+        );
+        tetherButtonCtx.stroke();
+        
+        // Draw second chain link
+        tetherButtonCtx.beginPath();
+        tetherButtonCtx.ellipse(
+            buttonCenterX + 15, 
+            buttonCenterY, 
+            25, 15, 
+            Math.PI / 2, 0, 2 * Math.PI
+        );
+        tetherButtonCtx.stroke();
+        
+        // Function to download canvas as PNG
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html> 
