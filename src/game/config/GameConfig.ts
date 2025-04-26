@@ -98,15 +98,14 @@ export const TouchControlsConfig = {
 
 // Tether Config
 export const TetherConfig = {
-    maxLength: 100,         // Maximum length before spring force applies (pixels)
-    minLength: 20,          // Minimum length (optional, less critical for this implementation)
-    springConstant: .1,   // Stiffness of the tether spring (k)
-    damping: 0.001,         // Damping factor to reduce oscillations (c)
+    maxLength: 150,         // Fixed distance between player and salvage (pixels)
     lineWidth: 2,
     lineColor: 0x00ff00,     // Green tether line
     maxAttachDistance: 150, // Max distance player can be from salvage to attach tether
     attachRangeIndicatorColor: 0x00ff00, // Color of the visual range indicator
     attachRangeIndicatorAlpha: 0.25,    // Alpha/transparency of the range indicator
+    towForce: 100,          // Force applied to towed salvage
+    towDamping: 0.1,        // Damping factor for smoother movement
 };
 
 // Background Config
