@@ -15,7 +15,10 @@ import {
     TetherConfig,
     TouchControlsConfig,
     DeviceDetection,
-    PlayerConfig
+    PlayerConfig,
+    ResponsiveConfig,
+    CameraConfig,
+    WorldConfig
 } from '../config/GameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -49,6 +52,10 @@ export default class GameScene extends Phaser.Scene {
     private joystickVisible: boolean = false;
     private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
+    private isMobileDevice: boolean = false;
+    private deviceMultiplier: number = 1.0;
+    private screenOrientation: 'portrait' | 'landscape' = 'landscape';
+
     constructor() {
         super('GameScene');
     }
@@ -57,9 +64,13 @@ export default class GameScene extends Phaser.Scene {
         console.log('GameScene create');
         const { width, height } = this.scale;
 
-        // Check if this is a touch device
+        // Detect device type and set screen properties
         this.isTouchDevice = DeviceDetection.isTouchDevice();
-        console.log(`Touch device detected: ${this.isTouchDevice}`);
+        this.isMobileDevice = DeviceDetection.isMobileDevice();
+        this.screenOrientation = DeviceDetection.getScreenOrientation();
+        this.deviceMultiplier = ResponsiveConfig.getMultiplier();
+        
+        console.log(`Device detection: Touch: ${this.isTouchDevice}, Mobile: ${this.isMobileDevice}, Orientation: ${this.screenOrientation}, Size Multiplier: ${this.deviceMultiplier}`);
 
         // Create thrust button texture if it doesn't exist
         if (!this.textures.exists('thrust-button')) {
@@ -102,10 +113,11 @@ export default class GameScene extends Phaser.Scene {
         // Reset current haul score on scene start
         this.score = 0;
 
-        // Set world bounds (adjust size if needed)
-        const worldWidth = width * 1.5;
-        const worldHeight = height * 1.5;
-        this.physics.world.setBounds(0, 0, worldWidth, worldHeight); // Larger world
+        // Set world bounds (adjust size based on device type)
+        const worldSizeMultiplier = this.isMobileDevice ? WorldConfig.sizeMultiplier.mobile : WorldConfig.sizeMultiplier.desktop;
+        const worldWidth = width * worldSizeMultiplier;
+        const worldHeight = height * worldSizeMultiplier;
+        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
         // Add Background FIRST
         this.add.tileSprite(0, 0, worldWidth, worldHeight, BackgroundConfig.textureKey)
@@ -200,9 +212,23 @@ export default class GameScene extends Phaser.Scene {
         exitButton.on('pointerover', () => exitButton.setStyle({ backgroundColor: '#ff0000', color: '#000' }));
         exitButton.on('pointerout', () => exitButton.setStyle({ backgroundColor: '#555555', color: '#ff0000' }));
 
-        // Camera setup
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        // Camera setup with device-specific settings
+        const cameraZoom = this.isMobileDevice ? 
+            (this.screenOrientation === 'portrait' ? CameraConfig.zoomLevel.mobile * 0.8 : CameraConfig.zoomLevel.mobile) :
+            CameraConfig.zoomLevel.desktop;
+            
+        const cameraFollowSpeed = this.isMobileDevice ? 
+            CameraConfig.followSpeed.mobile : 
+            CameraConfig.followSpeed.desktop;
+            
+        this.cameras.main.startFollow(this.player, true, cameraFollowSpeed, cameraFollowSpeed);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+        this.cameras.main.setZoom(cameraZoom);
+        
+        console.log(`Camera setup: Zoom: ${cameraZoom}, Follow Speed: ${cameraFollowSpeed}`);
+
+        // Listen for orientation changes
+        this.scale.on('resize', this.handleScreenResize, this);
 
         // Emit the ready event for React bridge
         EventBus.emit('current-scene-ready', this);
@@ -239,26 +265,82 @@ export default class GameScene extends Phaser.Scene {
         this.events.on('update', checkForDeposits);
     }
 
+    // Handler for screen resize/orientation change
+    handleScreenResize() {
+        if (!this.scene.isActive()) return;
+        
+        const newOrientation = DeviceDetection.getScreenOrientation();
+        const newMultiplier = ResponsiveConfig.getMultiplier();
+        
+        console.log(`Screen resized: New orientation: ${newOrientation}, New multiplier: ${newMultiplier}`);
+        
+        // Update stored values
+        this.screenOrientation = newOrientation;
+        this.deviceMultiplier = newMultiplier;
+        
+        // Adjust camera zoom based on new orientation
+        if (this.isMobileDevice) {
+            const newZoom = this.screenOrientation === 'portrait' 
+                ? CameraConfig.zoomLevel.mobile * 0.8 
+                : CameraConfig.zoomLevel.mobile;
+                
+            this.cameras.main.setZoom(newZoom);
+            console.log(`Camera zoom adjusted to: ${newZoom}`);
+        }
+        
+        // Recreate touch controls with new sizes if they exist
+        if (this.isTouchDevice && this.tetherButton && this.thrustButton) {
+            // Remove old controls
+            this.tetherButton.destroy();
+            this.thrustButton.destroy();
+            if (this.joystick) {
+                this.joystick.outer.destroy();
+                this.joystick.inner.destroy();
+            }
+            
+            // Recreate with new sizes
+            this.createTouchControls();
+            console.log('Touch controls recreated for new screen size');
+        }
+    }
+
     createTouchControls() {
         const { width, height } = this.scale;
         
-        // Calculate positions for buttons (not joystick since it will be dynamic)
-        const buttonX = TouchControlsConfig.tetherButtonPosition.x >= 0 
-            ? TouchControlsConfig.tetherButtonPosition.x 
-            : width + TouchControlsConfig.tetherButtonPosition.x;
-            
-        const buttonY = TouchControlsConfig.tetherButtonPosition.y >= 0 
-            ? TouchControlsConfig.tetherButtonPosition.y 
-            : height + TouchControlsConfig.tetherButtonPosition.y;
+        // Apply responsive sizing based on device
+        const joystickSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.joystickSize);
+        const buttonSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.buttonSize);
         
-        // Calculate thrust button position
-        const thrustButtonX = TouchControlsConfig.thrustButtonPosition.x >= 0 
-            ? TouchControlsConfig.thrustButtonPosition.x 
-            : width + TouchControlsConfig.thrustButtonPosition.x;
+        // Calculate positions for buttons - adapted for different screen sizes and orientations
+        let tetherX, tetherY, thrustX, thrustY;
+        
+        if (this.screenOrientation === 'portrait') {
+            // Portrait mode - buttons at bottom of screen
+            tetherX = width - buttonSize;
+            tetherY = height - buttonSize * 1.5;
+            thrustX = width - buttonSize * 2.5;
+            thrustY = height - buttonSize * 1.5;
+        } else {
+            // Landscape mode - use regular positions but scaled
+            tetherX = TouchControlsConfig.tetherButtonPosition.x >= 0 
+                ? TouchControlsConfig.tetherButtonPosition.x 
+                : width + TouchControlsConfig.tetherButtonPosition.x;
+                
+            tetherY = TouchControlsConfig.tetherButtonPosition.y >= 0 
+                ? TouchControlsConfig.tetherButtonPosition.y 
+                : height + TouchControlsConfig.tetherButtonPosition.y;
             
-        const thrustButtonY = TouchControlsConfig.thrustButtonPosition.y >= 0 
-            ? TouchControlsConfig.thrustButtonPosition.y 
-            : height + TouchControlsConfig.thrustButtonPosition.y;
+            thrustX = TouchControlsConfig.thrustButtonPosition.x >= 0 
+                ? TouchControlsConfig.thrustButtonPosition.x 
+                : width + TouchControlsConfig.thrustButtonPosition.x;
+                
+            thrustY = TouchControlsConfig.thrustButtonPosition.y >= 0 
+                ? TouchControlsConfig.thrustButtonPosition.y 
+                : height + TouchControlsConfig.thrustButtonPosition.y;
+        }
+        
+        console.log(`Creating touch controls: joystick size: ${joystickSize}, button size: ${buttonSize}`);
+        console.log(`Button positions: Tether(${tetherX},${tetherY}), Thrust(${thrustX},${thrustY})`);
         
         // Create virtual joystick with configured sizes, but initially invisible
         this.joystick = {
@@ -266,12 +348,12 @@ export default class GameScene extends Phaser.Scene {
                 .setScrollFactor(0)
                 .setAlpha(0)  // Initially invisible
                 .setDepth(1000)
-                .setScale(TouchControlsConfig.joystickSize / 100),  // Scale based on config size
+                .setScale(joystickSize / 100),  // Scale based on config size
             inner: this.add.image(0, 0, 'joystick-inner')
                 .setScrollFactor(0)
                 .setAlpha(0)  // Initially invisible
                 .setDepth(1001)
-                .setScale(TouchControlsConfig.joystickSize * 0.6 / 100)  // Smaller inner stick
+                .setScale(joystickSize * 0.6 / 100)  // Smaller inner stick
         };
         
         // Create direction indicator for visualizing thrust direction
@@ -280,20 +362,20 @@ export default class GameScene extends Phaser.Scene {
             .setDepth(999);
         
         // Create tether button with configured size
-        this.tetherButton = this.add.image(buttonX, buttonY, 'tether-button')
+        this.tetherButton = this.add.image(tetherX, tetherY, 'tether-button')
             .setScrollFactor(0)
             .setAlpha(TouchControlsConfig.opacity)
             .setDepth(1000)
-            .setScale(TouchControlsConfig.buttonSize / 100)
-            .setInteractive() // Revert to simple interaction without custom hit area
+            .setScale(buttonSize / 100)
+            .setInteractive()
             .setTint(TouchControlsConfig.colors.normal);
             
         // Create thrust button
-        this.thrustButton = this.add.image(thrustButtonX, thrustButtonY, 'thrust-button')
+        this.thrustButton = this.add.image(thrustX, thrustY, 'thrust-button')
             .setScrollFactor(0)
             .setAlpha(TouchControlsConfig.opacity)
             .setDepth(1000)
-            .setScale(TouchControlsConfig.buttonSize / 100)
+            .setScale(buttonSize / 100)
             .setInteractive()
             .setTint(TouchControlsConfig.colors.normal);
         
@@ -690,7 +772,7 @@ export default class GameScene extends Phaser.Scene {
     createDepositZoneCollider() {
         // Get the deposit zone position from the parent ship
         const depositZonePos = this.parentShip.getDepositZonePosition();
-        const radius = ParentShipConfig.depositZoneRadius || 120;
+        const radius = ParentShipConfig.depositZoneRadius * (this.isMobileDevice ? 1.2 : 1.0); // Slightly larger on mobile
 
         // If the texture doesn't exist, create a simple circular texture
         if (!this.textures.exists('deposit-zone-collider')) {
@@ -966,7 +1048,7 @@ export default class GameScene extends Phaser.Scene {
             x: this.parentShip.x + 300, // Offset from parent ship
             y: this.parentShip.y 
         };
-        const radius = 100; // Size of exit zone
+        const radius = 100 * (this.isMobileDevice ? 1.2 : 1.0); // Slightly larger on mobile
 
         // If the texture doesn't exist, create a circular texture
         if (!this.textures.exists('exit-zone-collider')) {
@@ -1172,5 +1254,8 @@ export default class GameScene extends Phaser.Scene {
         this.input.off('pointermove');
         this.input.off('pointerup');
         this.input.off('pointercancel');
+        
+        // Remove the resize event listener
+        this.scale.off('resize', this.handleScreenResize, this);
     }
 } 

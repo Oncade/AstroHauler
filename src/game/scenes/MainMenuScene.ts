@@ -15,7 +15,7 @@ export default class MainMenuScene extends Phaser.Scene {
         const logo = this.add.image(width / 2, height - 75, 'bootLogo') // Positioned 50px from bottom
             .setOrigin(0.5, 1) // Set origin to bottom-center
             .setScale(0.4); // Scale it down
-
+/*
         // Add game title text
         this.add.text(width * 0.5, height * 0.3, 'ASTRO HAULER', { 
             font: 'bold 64px Arial',
@@ -33,7 +33,7 @@ export default class MainMenuScene extends Phaser.Scene {
             stroke: '#000',
             strokeThickness: 3
         }).setOrigin(0.5);
-
+*/
         // Start Button
         const startButton = this.add.text(width * 0.5, height * 0.6, '[ Start Game ]', {
             font: '32px Arial',

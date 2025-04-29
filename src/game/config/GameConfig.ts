@@ -6,6 +6,37 @@ export const DeviceDetection = {
         return (('ontouchstart' in window) || 
                 (navigator.maxTouchPoints > 0) || 
                 ('msMaxTouchPoints' in navigator && (navigator as any).msMaxTouchPoints > 0));
+    },
+    isMobileDevice: (): boolean => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+    getScreenOrientation: (): 'portrait' | 'landscape' => {
+        return window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
+    }
+};
+
+// Responsive scaling configuration
+export const ResponsiveConfig = {
+    // Size multipliers based on screen size categories
+    sizeMultiplier: {
+        small: 0.6,  // For phones
+        medium: 0.8, // For small tablets
+        large: 1.0   // For large tablets and desktops
+    },
+    // Threshold breakpoints in pixels
+    breakpoints: {
+        small: 600,    // Phones
+        medium: 1024   // Tablets
+    },
+    // Get the appropriate size multiplier based on screen dimensions
+    getMultiplier: (): number => {
+        const smallerDimension = Math.min(window.innerWidth, window.innerHeight);
+        if (smallerDimension < ResponsiveConfig.breakpoints.small) {
+            return ResponsiveConfig.sizeMultiplier.small;
+        } else if (smallerDimension < ResponsiveConfig.breakpoints.medium) {
+            return ResponsiveConfig.sizeMultiplier.medium;
+        }
+        return ResponsiveConfig.sizeMultiplier.large;
     }
 };
 
@@ -18,9 +49,18 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#000010', // Darker space background
     transparent: true,
     scale: {
-        mode: Phaser.Scale.RESIZE,
-        width: window.innerWidth,
-        height: window.innerHeight
+        mode: Phaser.Scale.FIT, // Change to FIT for better cross-device scaling
+        autoCenter: Phaser.Scale.CENTER_BOTH, // Center the game canvas
+        width: 1920,
+        height: 1080,
+        min: {
+            width: 320,
+            height: 480
+        },
+        max: {
+            width: 1920,
+            height: 1080
+        }
     },
     physics: {
         default: 'arcade',
@@ -59,6 +99,7 @@ export const ControlKeys = {
 
 // Touch Controls Config
 export const TouchControlsConfig = {
+    // Base sizes (will be multiplied by responsive multiplier)
     joystickSize: 150,          // Size of virtual joystick in pixels
     buttonSize: 100,            // Size of virtual buttons in pixels
     joystickHitArea: 200,       // Size of the joystick's interactive area (larger than visible area)
@@ -98,6 +139,10 @@ export const TouchControlsConfig = {
         enabled: true,          // Enable dynamic joystick that appears at touch location
         fadeOutTime: 250,       // Time in ms for joystick to fade out after release
         buttonSafeZone: 70      // Distance in pixels to keep joystick away from buttons
+    },
+    // Get responsive size based on screen dimensions
+    getResponsiveSize: (baseSize: number): number => {
+        return baseSize * ResponsiveConfig.getMultiplier();
     }
 };
 
@@ -147,6 +192,27 @@ export const ParentShipConfig = {
     spawnY: typeof GameConfig.height === 'number' ? GameConfig.height * 0.5 : 768 * 0.5, // Position vertically centered
     depositZoneRadius: 100, // Visual radius for deposit zone indicator
     depositZoneOffset: { x: 600, y: 0 } // Offset from parent ship center (positive x = right)
+};
+
+// Camera Config for different device types
+export const CameraConfig = {
+    zoomLevel: {
+        mobile: 0.7,    // Zoomed out more on mobile for better overview
+        tablet: 0.85,   // Slightly zoomed out on tablets
+        desktop: 1.0    // Regular zoom on desktop
+    },
+    followSpeed: {
+        mobile: 0.05,   // Slower follow for mobile (less disorienting)
+        desktop: 0.1    // Regular follow speed for desktop
+    }
+};
+
+// World size config based on device type
+export const WorldConfig = {
+    sizeMultiplier: {
+        mobile: 1.2,    // Smaller world for mobile
+        desktop: 1.5    // Larger world for desktop
+    }
 };
 
 // --- Helper Functions ---
