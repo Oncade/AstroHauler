@@ -151,12 +151,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             
             // Start thruster particles with intensity based on force
             this.startThrusterEffect();
-            
-            // Adjust particle frequency based on thrust force
-            const normalizedForce = Math.min(force / PlayerConfig.thrustForce, 1);
-            const baseFrequency = 40; // Higher number = fewer particles
-            const frequency = baseFrequency / Math.max(normalizedForce, 0.2);
-            this.thrusterParticles.setFrequency(frequency);
+
         }
     }
     

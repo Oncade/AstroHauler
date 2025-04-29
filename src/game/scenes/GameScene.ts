@@ -516,6 +516,7 @@ export default class GameScene extends Phaser.Scene {
             this.player.thrust();
         } else if (this.isThrustButtonPressed) {
             // Thrust button - apply gradual thrust in the direction the ship is facing
+            //this.player.thrust();
             this.player.thrustWithForce(this.currentThrustForce);
         } else {
             // Stop applying acceleration when no thrust buttons are pressed
