@@ -233,3 +233,22 @@ This implementation plan provides a roadmap for developing Phase 1 of AstroHaule
 8. Updating UI to show both current Haul score and total SpaceBucks
 
 The next step (Week 4) focuses on polishing and testing the game mechanics, refining the physics feel, and optimizing performance across different devices. 
+
+
+TODO: 
+Get parent ship in the correct position
+
+Position exit on parent ship
+Position Deposit on parent ship
+
+Handle damage
+Handle parent ship collision
+Handle collisions
+
+damage VFX
+Deposit VFX
+
+Need to setup background, some parralax
+
+Setup control room
+
