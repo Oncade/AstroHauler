@@ -93,6 +93,11 @@ export const TouchControlsConfig = {
         alpha: 0.7,             // Alpha/transparency of the direction indicator
         lineWidth: 3,           // Width of the direction indicator line
         arrowSize: 10           // Size of the arrowhead
+    },
+    dynamicJoystick: {
+        enabled: true,          // Enable dynamic joystick that appears at touch location
+        fadeOutTime: 250,       // Time in ms for joystick to fade out after release
+        buttonSafeZone: 70      // Distance in pixels to keep joystick away from buttons
     }
 };
 

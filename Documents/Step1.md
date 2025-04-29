@@ -236,6 +236,8 @@ The next step (Week 4) focuses on polishing and testing the game mechanics, refi
 
 
 TODO: 
+Have the joystick only appear when the player touches the screen that is not the thrust or tether button.
+Make the screen size work for mobile
 Get parent ship in the correct position
 
 Position exit on parent ship

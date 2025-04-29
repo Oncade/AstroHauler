@@ -46,6 +46,8 @@ export default class GameScene extends Phaser.Scene {
     private joystickAngle: number = 0;
     private joystickDistance: number = 0;
     private touchDirectionIndicator!: Phaser.GameObjects.Graphics;
+    private joystickVisible: boolean = false;
+    private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
     constructor() {
         super('GameScene');
@@ -240,15 +242,7 @@ export default class GameScene extends Phaser.Scene {
     createTouchControls() {
         const { width, height } = this.scale;
         
-        // Calculate positions based on config, handling negative values as offsets from edges
-        const joystickX = TouchControlsConfig.joystickPosition.x >= 0 
-            ? TouchControlsConfig.joystickPosition.x 
-            : width + TouchControlsConfig.joystickPosition.x;
-            
-        const joystickY = TouchControlsConfig.joystickPosition.y >= 0 
-            ? TouchControlsConfig.joystickPosition.y 
-            : height + TouchControlsConfig.joystickPosition.y;
-            
+        // Calculate positions for buttons (not joystick since it will be dynamic)
         const buttonX = TouchControlsConfig.tetherButtonPosition.x >= 0 
             ? TouchControlsConfig.tetherButtonPosition.x 
             : width + TouchControlsConfig.tetherButtonPosition.x;
@@ -266,16 +260,16 @@ export default class GameScene extends Phaser.Scene {
             ? TouchControlsConfig.thrustButtonPosition.y 
             : height + TouchControlsConfig.thrustButtonPosition.y;
         
-        // Create virtual joystick with configured sizes
+        // Create virtual joystick with configured sizes, but initially invisible
         this.joystick = {
-            outer: this.add.image(joystickX, joystickY, 'joystick-outer')
+            outer: this.add.image(0, 0, 'joystick-outer')
                 .setScrollFactor(0)
-                .setAlpha(TouchControlsConfig.opacity)
+                .setAlpha(0)  // Initially invisible
                 .setDepth(1000)
                 .setScale(TouchControlsConfig.joystickSize / 100),  // Scale based on config size
-            inner: this.add.image(joystickX, joystickY, 'joystick-inner')
+            inner: this.add.image(0, 0, 'joystick-inner')
                 .setScrollFactor(0)
-                .setAlpha(TouchControlsConfig.opacity + 0.1)  // Slightly more visible
+                .setAlpha(0)  // Initially invisible
                 .setDepth(1001)
                 .setScale(TouchControlsConfig.joystickSize * 0.6 / 100)  // Smaller inner stick
         };
@@ -355,18 +349,50 @@ export default class GameScene extends Phaser.Scene {
         // Track the joystick pointer ID to handle multiple simultaneous touches
         let joystickPointerId: number | null = null;
         
-        // Setup joystick input - handle multiple simultaneous touches
+        // Setup dynamic joystick input
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            // Only process if it's near the joystick area and we're not already tracking a joystick pointer
-            const distToJoystick = Phaser.Math.Distance.Between(
+            // Don't create joystick if it's already active
+            if (joystickPointerId !== null) return;
+            
+            // Check if pointer is over a button to avoid creating joystick there
+            const isTouchingTetherButton = this.tetherButton.getBounds().contains(pointer.x, pointer.y);
+            const isTouchingThrustButton = this.thrustButton.getBounds().contains(pointer.x, pointer.y);
+            
+            // Also check for a safe zone around the buttons
+            const safeZone = TouchControlsConfig.dynamicJoystick.buttonSafeZone;
+            const tetherButtonDist = Phaser.Math.Distance.Between(
                 pointer.x, pointer.y, 
-                this.joystick.outer.x, this.joystick.outer.y
+                this.tetherButton.x, this.tetherButton.y
+            );
+            const thrustButtonDist = Phaser.Math.Distance.Between(
+                pointer.x, pointer.y, 
+                this.thrustButton.x, this.thrustButton.y
             );
             
-            if (distToJoystick < TouchControlsConfig.joystickHitArea && joystickPointerId === null) {
+            const isNearButtons = tetherButtonDist < this.tetherButton.displayWidth/2 + safeZone || 
+                                 thrustButtonDist < this.thrustButton.displayWidth/2 + safeZone;
+            
+            // Only create joystick if not touching or near buttons
+            if (!isTouchingTetherButton && !isTouchingThrustButton && !isNearButtons) {
+                // Position joystick at touch location
+                this.joystick.outer.setPosition(pointer.x, pointer.y);
+                this.joystick.inner.setPosition(pointer.x, pointer.y);
+                
+                // Make joystick visible with proper alpha
+                this.joystick.outer.setAlpha(TouchControlsConfig.opacity);
+                this.joystick.inner.setAlpha(TouchControlsConfig.opacity + 0.1);
+                
                 // Start tracking this pointer for joystick movement
                 joystickPointerId = pointer.id;
                 this.isTouching = true;
+                this.joystickVisible = true;
+                
+                // Stop any fade tween that might be active
+                if (this.joystickFadeTween) {
+                    this.joystickFadeTween.stop();
+                }
+                
+                // Start tracking joystick movement
                 this.updateJoystick(pointer);
             }
         });
@@ -380,12 +406,17 @@ export default class GameScene extends Phaser.Scene {
         
         // Handle both pointer up and pointer cancel events
         const handlePointerRelease = (pointer: Phaser.Input.Pointer) => {
-            // Only reset if this is the pointer we're tracking for the joystick
+            // Only process if this is the pointer we're tracking for the joystick
             if (pointer.id === joystickPointerId) {
-                this.resetJoystick();
+                // Fade out joystick
+                if (this.joystickVisible) {
+                    this.fadeOutJoystick();
+                }
+                
                 this.isTouching = false;
                 this.touchThrust = false;
                 joystickPointerId = null;
+                
                 // Clear the direction indicator
                 this.touchDirectionIndicator.clear();
             }
@@ -395,7 +426,23 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointercancel', handlePointerRelease);
     }
     
+    // Fade out joystick smoothly
+    fadeOutJoystick() {
+        if (!this.joystickVisible) return;
+        
+        this.joystickFadeTween = this.tweens.add({
+            targets: [this.joystick.outer, this.joystick.inner],
+            alpha: 0,
+            duration: TouchControlsConfig.dynamicJoystick.fadeOutTime,
+            onComplete: () => {
+                this.joystickVisible = false;
+            }
+        });
+    }
+    
     updateJoystick(pointer: Phaser.Input.Pointer) {
+        if (!this.joystickVisible) return;
+        
         const joystickCenterX = this.joystick.outer.x;
         const joystickCenterY = this.joystick.outer.y;
         
@@ -441,7 +488,7 @@ export default class GameScene extends Phaser.Scene {
         this.touchDirectionIndicator.clear();
         
         // Don't draw if not actively using joystick
-        if (!this.isTouching) return;
+        if (!this.isTouching || !this.joystickVisible) return;
         
         // Calculate direction line endpoints
         const startX = this.joystick.outer.x;
@@ -479,10 +526,10 @@ export default class GameScene extends Phaser.Scene {
     }
     
     resetJoystick() {
-        if (this.joystick) {
-            this.joystick.inner.x = this.joystick.outer.x;
-            this.joystick.inner.y = this.joystick.outer.y;
-        }
+        if (!this.joystick || !this.joystickVisible) return;
+        
+        this.joystick.inner.x = this.joystick.outer.x;
+        this.joystick.inner.y = this.joystick.outer.y;
         this.touchThrust = false;
         this.joystickAngle = 0;
         this.joystickDistance = 0;
@@ -496,7 +543,7 @@ export default class GameScene extends Phaser.Scene {
     update(time: number, delta: number) {
         // --- Handle Input ---
         // Handle rotation differently for keyboard vs. touch
-        if (this.isTouchDevice && this.isTouching) {
+        if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
             // Touch controls - rotate ship to face the direction of joystick movement
             this.rotateShipTowards(this.targetRotation, delta);
         } else {
@@ -1100,5 +1147,30 @@ export default class GameScene extends Phaser.Scene {
         
         // Stop applying acceleration but maintain momentum
         this.player.stopThrust();
+    }
+
+    // Clean up resources when scene is shut down
+    shutdown() {
+        // Clean up tweens
+        if (this.joystickFadeTween) {
+            this.joystickFadeTween.stop();
+            this.joystickFadeTween = null;
+        }
+        
+        if (this.thrustTween) {
+            this.thrustTween.stop();
+            this.thrustTween = null;
+        }
+        
+        // Clear any graphics
+        if (this.touchDirectionIndicator) {
+            this.touchDirectionIndicator.clear();
+        }
+        
+        // Remove event listeners
+        this.input.off('pointerdown');
+        this.input.off('pointermove');
+        this.input.off('pointerup');
+        this.input.off('pointercancel');
     }
 } 
