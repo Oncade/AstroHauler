@@ -212,8 +212,8 @@ export const ParentShipConfig = {
 // Camera Config for different device types
 export const CameraConfig = {
     zoomLevel: {
-        mobile: 0.7,    // Zoomed out more on mobile for better overview
-        tablet: 0.85,   // Slightly zoomed out on tablets
+        mobile: 0.9,    // Increased from 0.7 to prevent touch input issues
+        tablet: 0.95,   // Increased from 0.85
         desktop: 1.0    // Regular zoom on desktop
     },
     followSpeed: {

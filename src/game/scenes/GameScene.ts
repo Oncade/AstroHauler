@@ -72,6 +72,25 @@ export default class GameScene extends Phaser.Scene {
         
         console.log(`Device detection: Touch: ${this.isTouchDevice}, Mobile: ${this.isMobileDevice}, Orientation: ${this.screenOrientation}, Size Multiplier: ${this.deviceMultiplier}`);
 
+        // Add debug text for mobile touch debugging
+        if (this.isMobileDevice || this.isTouchDevice) {
+            this.add.text(10, 50, 'TOUCH DEBUG', {
+                fontSize: '18px',
+                color: '#ffff00'
+            }).setScrollFactor(0).setDepth(2000);
+
+            // Add camera zoom debug text
+            const zoomText = this.add.text(10, 80, `Camera Zoom: ${this.cameras.main.zoom.toFixed(2)}`, {
+                fontSize: '16px',
+                color: '#00ffff'
+            }).setScrollFactor(0).setDepth(2000);
+
+            // Update zoom text on camera changes
+            this.events.on('update', () => {
+                zoomText.setText(`Camera Zoom: ${this.cameras.main.zoom.toFixed(2)}`);
+            });
+        }
+
         // Create thrust button texture if it doesn't exist
         if (!this.textures.exists('thrust-button')) {
             console.log('Creating thrust-button texture');
@@ -463,18 +482,21 @@ export default class GameScene extends Phaser.Scene {
             // Don't create joystick if it's already active
             if (joystickPointerId !== null) return;
             
+            // Get the actual position considering camera zoom
+            const adjustedPosition = this.getCorrectedPointerPosition(pointer);
+            
             // Check if pointer is over a button to avoid creating joystick there
-            const isTouchingTetherButton = this.tetherButton.getBounds().contains(pointer.x, pointer.y);
-            const isTouchingThrustButton = this.thrustButton.getBounds().contains(pointer.x, pointer.y);
+            const isTouchingTetherButton = this.tetherButton.getBounds().contains(adjustedPosition.x, adjustedPosition.y);
+            const isTouchingThrustButton = this.thrustButton.getBounds().contains(adjustedPosition.x, adjustedPosition.y);
             
             // Also check for a safe zone around the buttons
             const safeZone = TouchControlsConfig.dynamicJoystick.buttonSafeZone;
             const tetherButtonDist = Phaser.Math.Distance.Between(
-                pointer.x, pointer.y, 
+                adjustedPosition.x, adjustedPosition.y, 
                 this.tetherButton.x, this.tetherButton.y
             );
             const thrustButtonDist = Phaser.Math.Distance.Between(
-                pointer.x, pointer.y, 
+                adjustedPosition.x, adjustedPosition.y, 
                 this.thrustButton.x, this.thrustButton.y
             );
             
@@ -483,9 +505,9 @@ export default class GameScene extends Phaser.Scene {
             
             // Only create joystick if not touching or near buttons
             if (!isTouchingTetherButton && !isTouchingThrustButton && !isNearButtons) {
-                // Position joystick at touch location
-                this.joystick.outer.setPosition(pointer.x, pointer.y);
-                this.joystick.inner.setPosition(pointer.x, pointer.y);
+                // Position joystick at touch location (use adjusted position)
+                this.joystick.outer.setPosition(adjustedPosition.x, adjustedPosition.y);
+                this.joystick.inner.setPosition(adjustedPosition.x, adjustedPosition.y);
                 
                 // Make joystick visible with proper alpha
                 this.joystick.outer.setAlpha(TouchControlsConfig.opacity);
@@ -535,6 +557,63 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointercancel', handlePointerRelease);
     }
     
+    // Helper method to correct pointer position for camera zoom
+    getCorrectedPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
+        // Debug touch positions with visual markers if in mobile/touch device
+        if (this.isMobileDevice || this.isTouchDevice) {
+            // Add a temporary visual marker at the raw pointer position
+            const rawMarker = this.add.circle(pointer.x, pointer.y, 15, 0xff0000, 0.5)
+                .setScrollFactor(0)
+                .setDepth(1000);
+                
+            // Fade out and destroy after 1 second
+            this.tweens.add({
+                targets: rawMarker,
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => rawMarker.destroy()
+            });
+        }
+        
+        // For UI interactions (with setScrollFactor(0)), just return the raw pointer position
+        return { 
+            x: pointer.x,
+            y: pointer.y
+        };
+    }
+    
+    // Helper method to get world coordinates for game world interactions
+    // This is for interacting with game objects that are affected by camera zoom
+    getWorldPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
+        // Get camera zoom level
+        const zoom = this.cameras.main.zoom;
+        
+        // Get camera scroll position
+        const scrollX = this.cameras.main.scrollX;
+        const scrollY = this.cameras.main.scrollY;
+        
+        // Convert screen coordinates to world coordinates
+        const worldX = pointer.x / zoom + scrollX;
+        const worldY = pointer.y / zoom + scrollY;
+        
+        if (this.isMobileDevice || this.isTouchDevice) {
+            // Add a temporary visual marker at the calculated world position
+            const worldMarker = this.add.circle(worldX, worldY, 15, 0x00ff00, 0.5)
+                .setScrollFactor(1) // This will move with the camera
+                .setDepth(1000);
+                
+            // Fade out and destroy after 1 second
+            this.tweens.add({
+                targets: worldMarker,
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => worldMarker.destroy()
+            });
+        }
+        
+        return { x: worldX, y: worldY };
+    }
+    
     // Fade out joystick smoothly
     fadeOutJoystick() {
         if (!this.joystickVisible) return;
@@ -552,12 +631,15 @@ export default class GameScene extends Phaser.Scene {
     updateJoystick(pointer: Phaser.Input.Pointer) {
         if (!this.joystickVisible) return;
         
+        // Get corrected pointer position
+        const adjustedPosition = this.getCorrectedPointerPosition(pointer);
+        
         const joystickCenterX = this.joystick.outer.x;
         const joystickCenterY = this.joystick.outer.y;
         
-        // Calculate distance from center
-        const dx = pointer.x - joystickCenterX;
-        const dy = pointer.y - joystickCenterY;
+        // Calculate distance from center using corrected position
+        const dx = adjustedPosition.x - joystickCenterX;
+        const dy = adjustedPosition.y - joystickCenterY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const maxDistance = TouchControlsConfig.joystickSize * 0.5; // Maximum joystick movement
         
