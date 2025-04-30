@@ -32,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
     private totalSpaceBucks: number = 0;
+    private music!: Phaser.Sound.BaseSound;
 
     private keys: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     
@@ -64,6 +65,17 @@ export default class GameScene extends Phaser.Scene {
         console.log('GameScene create');
         const { width, height } = this.scale;
 
+        // Play random background music
+        this.playRandomBackgroundMusic();
+
+        // Set up scene transition event to stop music when leaving
+        this.events.once('shutdown', () => {
+            console.log('GameScene shutdown - stopping music');
+            if (this.music && this.music.isPlaying) {
+                this.music.stop();
+            }
+        });
+
         // Detect device type and set screen properties
         this.isTouchDevice = DeviceDetection.isTouchDevice();
         this.isMobileDevice = DeviceDetection.isMobileDevice();
@@ -75,12 +87,14 @@ export default class GameScene extends Phaser.Scene {
         // Add debug text for mobile touch debugging
         if (this.isMobileDevice || this.isTouchDevice) {
             this.add.text(10, 50, 'TOUCH DEBUG', {
+                fontFamily: '"Roboto Mono", "Courier New", monospace',
                 fontSize: '18px',
                 color: '#ffff00'
             }).setScrollFactor(0).setDepth(2000);
 
             // Add camera zoom debug text
             const zoomText = this.add.text(10, 80, `Camera Zoom: ${this.cameras.main.zoom.toFixed(2)}`, {
+                fontFamily: '"Roboto Mono", "Courier New", monospace',
                 fontSize: '16px',
                 color: '#00ffff'
             }).setScrollFactor(0).setDepth(2000);
@@ -207,6 +221,7 @@ export default class GameScene extends Phaser.Scene {
 
         // UI Elements
         this.scoreText = this.add.text(16, 16, 'Score: 0', {
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '32px',
             color: '#fff',
             // fixedWidth: 300 // Optional for alignment
@@ -937,6 +952,7 @@ export default class GameScene extends Phaser.Scene {
         
         // Add debug text to monitor overlap
         const debugText = this.add.text(10, 120, 'Deposit Zone Ready', {
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '18px',
             color: '#ffff00'
         }).setScrollFactor(0);
@@ -1148,6 +1164,9 @@ export default class GameScene extends Phaser.Scene {
             score: this.score,
             totalSpaceBucks: this.totalSpaceBucks
         });
+        
+        // Explicitly stop this scene to ensure shutdown is called
+        this.scene.stop('GameScene');
     }
     
     // Create the exit zone for ending the current haul
@@ -1219,6 +1238,7 @@ export default class GameScene extends Phaser.Scene {
         
         // Add label for the exit zone
         this.add.text(exitZonePos.x, exitZonePos.y - radius - 20, 'END HAUL', {
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '18px',
             color: '#ff5555',
             backgroundColor: '#333333',
@@ -1266,6 +1286,7 @@ export default class GameScene extends Phaser.Scene {
             height / 2 - 40, 
             'End this haul and return to base?', 
             {
+                fontFamily: '"Roboto Mono", "Courier New", monospace',
                 fontSize: '24px',
                 color: '#ffffff',
                 align: 'center'
@@ -1277,6 +1298,7 @@ export default class GameScene extends Phaser.Scene {
             height / 2 + 30, 
             '[ Yes ]', 
             {
+                fontFamily: '"Roboto Mono", "Courier New", monospace',
                 fontSize: '24px',
                 color: '#00ff00',
                 backgroundColor: '#333333',
@@ -1292,6 +1314,7 @@ export default class GameScene extends Phaser.Scene {
             height / 2 + 30, 
             '[ No ]', 
             {
+                fontFamily: '"Roboto Mono", "Courier New", monospace',
                 fontSize: '24px',
                 color: '#ff0000',
                 backgroundColor: '#333333',
@@ -1366,5 +1389,24 @@ export default class GameScene extends Phaser.Scene {
         
         // Remove the resize event listener
         this.scale.off('resize', this.handleScreenResize, this);
+    }
+
+    // Helper method to select and play random background music
+    playRandomBackgroundMusic() {
+        // Available music tracks (excluding main menu music)
+        const musicTracks = ['gameMusic', 'contemplativeMusic'];
+        
+        // Randomly select a track
+        const selectedTrack = Phaser.Utils.Array.GetRandom(musicTracks);
+        
+        console.log(`Selected background music: ${selectedTrack}`);
+        
+        // Play the selected music with lower volume and looping
+        this.music = this.sound.add(selectedTrack, {
+            volume: 0.4, // Lower volume for background music
+            loop: true
+        });
+        
+        this.music.play();
     }
 } 

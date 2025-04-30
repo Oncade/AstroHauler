@@ -28,7 +28,7 @@ export default class IntroVideoScene extends Phaser.Scene {
 
         // Add skip text
         this.skipText = this.add.text(width - 20, height - 20, 'Skip [Space]', {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '18px',
             color: '#ffffff'
         }).setOrigin(1, 1).setInteractive({ useHandCursor: true });

@@ -11,11 +11,15 @@ export default class PreloaderScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Add background and logo first
         this.add.image(width / 2, height / 2, 'bootBackground');
-        const logo = this.add.image(width / 2, height - 50, 'bootLogo') // Positioned 50px from bottom
-            .setOrigin(0.5, 1) // Set origin to bottom-center
-            .setScale(0.4); // Scale it down
+        const AstroHaulerLogo = this.add.image(width / 2, height / 2, 'AstroHaulerLogo')
+            .setOrigin(0, 1)
+            .setScale(0.5);
+
+
+        const logo = this.add.image(width / 2, height - 75, 'bootLogo') // Positioned 50px from bottom
+            .setOrigin(-1.1, .5) // Set origin to bottom-center
+            .setScale(0.25); // Scale it down
 
         // Display a loading indicator (optional)
         const progressBar = this.add.graphics();
@@ -81,7 +85,12 @@ export default class PreloaderScene extends Phaser.Scene {
         // Load particle effects
         this.load.image('thruster_particle', 'assets/vfx/thruster_particle.png');
 
-        // Placeholder for audio assets (Week 4)
+        // Load audio assets
+        this.load.audio('menuMusic', 'assets/audio/CosmicDrifter.mp3');
+        this.load.audio('gameMusic', 'assets/audio/Wayfarer.mp3');
+        this.load.audio('contemplativeMusic', 'assets/audio/ThePonderer.mp3');
+        
+        // Sound effects will be added later
         // this.load.audio('thruster', 'assets/audio/thruster.wav');
         // this.load.audio('collision', 'assets/audio/collision.wav');
     }

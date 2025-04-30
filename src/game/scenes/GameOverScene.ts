@@ -35,28 +35,33 @@ export default class GameOverScene extends Phaser.Scene {
 
         // Haul Complete Text
         this.add.text(width * 0.5, height * 0.3, 'HAUL COMPLETE', {
-            font: 'bold 64px Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
+            fontSize: '64px',
+            fontStyle: 'bold',
             color: '#ff7700',
             align: 'center'
         }).setOrigin(0.5);
 
         // Haul Score Text
         this.add.text(width * 0.5, height * 0.45, `SpaceBucks from haul: ${this.finalScore}` , {
-            font: '32px Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
+            fontSize: '32px',
             color: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
         
         // Total SpaceBucks Text
         this.add.text(width * 0.5, height * 0.53, `Total SpaceBucks: ${this.totalSpaceBucks}` , {
-            font: '36px Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
+            fontSize: '36px',
             color: '#ffff00',
             align: 'center'
         }).setOrigin(0.5);
 
         // Return to Command Center Button
         const commandCenterButton = this.add.text(width * 0.5, height * 0.65, '[ Return to Command Center ]', {
-            font: '28px Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
+            fontSize: '28px',
             color: '#ffff00',
             backgroundColor: '#555555',
             padding: { left: 15, right: 15, top: 10, bottom: 10 }
@@ -73,7 +78,8 @@ export default class GameOverScene extends Phaser.Scene {
 
         // Return to Main Menu Button
         const menuButton = this.add.text(width * 0.5, height * 0.8, '[ Return to Base ]', {
-            font: '28px Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
+            fontSize: '28px',
             color: '#ffffff',
             backgroundColor: '#333333',
             padding: { left: 15, right: 15, top: 10, bottom: 10 }

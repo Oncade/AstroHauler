@@ -68,7 +68,7 @@ export default class CommandCenterScene extends Phaser.Scene {
 
         // Ship info text
         this.add.text(width * 0.2, height * 0.45, 'SALVAGE VESSEL', {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '24px',
             color: '#ffaa00'
         }).setOrigin(0.5);
@@ -81,7 +81,7 @@ export default class CommandCenterScene extends Phaser.Scene {
             'HULL: REINFORCED',
             'CAPACITY: STANDARD'
         ].join('\n'), {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '18px',
             color: '#ffffff',
             align: 'left'
@@ -89,7 +89,7 @@ export default class CommandCenterScene extends Phaser.Scene {
         
         // SpaceBucks display
         this.add.text(width * 0.65, height * 0.61, `SPACEBUCKS: ${this.totalSpaceBucks}`, {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '28px',
             color: '#ffff00',
             stroke: '#000',
@@ -98,7 +98,7 @@ export default class CommandCenterScene extends Phaser.Scene {
         
         // Mission briefing text
         this.add.text(width * 0.46, height * 0.7, 'MISSION BRIEFING', {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '24px',
             color: '#33aaff'
         }).setOrigin(0.5);
@@ -110,7 +110,7 @@ export default class CommandCenterScene extends Phaser.Scene {
             'ESTIMATED SALVAGE VALUE: MEDIUM',
             'READY FOR DEPLOYMENT'
         ].join('\n'), {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '18px',
             color: '#ffffff',
             align: 'center'
@@ -123,7 +123,7 @@ export default class CommandCenterScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
             
         this.add.text(width * 0.15, height * 0.85, 'START HAUL', {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '24px',
             color: '#00ff00'
         }).setOrigin(0.5);
@@ -134,7 +134,7 @@ export default class CommandCenterScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
             
         this.add.text(width * 0.85, height * 0.85, 'RETURN TO BASE', {
-            fontFamily: 'Arial',
+            fontFamily: '"Roboto Mono", "Courier New", monospace',
             fontSize: '24px',
             color: '#ff0000'
         }).setOrigin(0.5);
