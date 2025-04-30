@@ -4,9 +4,18 @@ import { EventBus } from '../EventBus';
 export default class CommandCenterScene extends Phaser.Scene {
     private totalSpaceBucks: number = 0;
     private shipLevel: number = 1;
+    private planetVideo!: Phaser.GameObjects.Video;
 
     constructor() {
         super('CommandCenterScene');
+    }
+
+    preload() {
+        // Load the command center background image
+        this.load.image('commandCenterBg', 'assets/CommandCenter.png');
+        
+        // Load the planet video
+        this.load.video('planetVideo', 'assets/video/Planet1991.mp4');
     }
 
     init() {
@@ -18,9 +27,31 @@ export default class CommandCenterScene extends Phaser.Scene {
         console.log('CommandCenterScene create');
         const { width, height } = this.scale;
 
-        // Set command center background - dark metallic interior
-        this.cameras.main.setBackgroundColor('#1a1a2e');
+        // Add the command center background image
+        const bg = this.add.image(width/2, height/2, 'commandCenterBg');
+        
+        // Scale the background to cover the screen while maintaining aspect ratio
+        const scaleX = width / bg.width;
+        const scaleY = height / bg.height;
+        const scale = Math.max(scaleX, scaleY);
+        bg.setScale(scale);
+        
+        // Define both ratios in one object
+        const VIDEO_RATIO = {
+        width: 0.06,
+        height: 0.10,
+        scale: 0.87
+        };
 
+        // Add the planet video in the center of the screen with 4:3 aspect ratio
+        // Size it to about 1/4 of the screen
+        const videoWidth = width * VIDEO_RATIO.width * VIDEO_RATIO.scale; // 1/2 of screen width
+        const videoHeight = height * VIDEO_RATIO.height * VIDEO_RATIO.scale; // 4:3 aspect ratio
+        
+        this.planetVideo = this.add.video(width/2.2, height/2.55, 'planetVideo');
+        this.planetVideo.setDisplaySize(videoWidth, videoHeight);
+        this.planetVideo.play(true); // true enables looping
+        
         // Create command center panel layout
         this.createCommandCenterUI(width, height);
 
@@ -29,40 +60,21 @@ export default class CommandCenterScene extends Phaser.Scene {
     }
 
     createCommandCenterUI(width: number, height: number) {
-        // Create the command center border/frame
-        this.add.rectangle(width/2, height/2, width * 0.95, height * 0.9, 0x333344)
-            .setStrokeStyle(4, 0x66aaff);
 
-        // Create title for the command center
-        this.add.text(width/2, 40, 'COMMAND CENTER', {
-            fontFamily: 'Arial',
-            fontSize: '36px',
-            color: '#33ccff',
-            stroke: '#000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
-
-        // Create ship view screen
-        const shipViewArea = this.add.rectangle(width * 0.3, height * 0.35, width * 0.4, height * 0.4, 0x000000)
-            .setStrokeStyle(2, 0x00ff00);
-        
         // Add ship image inside view screen
-        const shipImage = this.add.image(width * 0.3, height * 0.35, 'ship')
+        const shipImage = this.add.image(width * 0.2, height * 0.37, 'ship')
             .setScale(2);
         
-        // Ship stats panel
-        const statsPanel = this.add.rectangle(width * 0.7, height * 0.35, width * 0.4, height * 0.4, 0x000000)
-            .setStrokeStyle(2, 0xffaa00);
-            
+
         // Ship info text
-        this.add.text(width * 0.7, height * 0.25, 'SALVAGE VESSEL', {
+        this.add.text(width * 0.2, height * 0.45, 'SALVAGE VESSEL', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#ffaa00'
         }).setOrigin(0.5);
         
         // Ship stats
-        this.add.text(width * 0.55, height * 0.3, [
+        this.add.text(width * 0.15, height * 0.5, [
             `SHIP LEVEL: ${this.shipLevel}`,
             'THRUST: STANDARD',
             'TETHER: BASIC',
@@ -76,7 +88,7 @@ export default class CommandCenterScene extends Phaser.Scene {
         });
         
         // SpaceBucks display
-        this.add.text(width * 0.75, height * 0.35, `SPACEBUCKS: ${this.totalSpaceBucks}`, {
+        this.add.text(width * 0.65, height * 0.61, `SPACEBUCKS: ${this.totalSpaceBucks}`, {
             fontFamily: 'Arial',
             fontSize: '28px',
             color: '#ffff00',
@@ -84,19 +96,15 @@ export default class CommandCenterScene extends Phaser.Scene {
             strokeThickness: 1
         }).setOrigin(0.5);
         
-        // Mission briefing panel
-        const missionPanel = this.add.rectangle(width * 0.5, height * 0.7, width * 0.8, height * 0.25, 0x000000)
-            .setStrokeStyle(2, 0x33aaff);
-            
         // Mission briefing text
-        this.add.text(width * 0.5, height * 0.63, 'MISSION BRIEFING', {
+        this.add.text(width * 0.46, height * 0.7, 'MISSION BRIEFING', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#33aaff'
         }).setOrigin(0.5);
         
-        this.add.text(width * 0.5, height * 0.7, [
-            'SECTOR: ALPHA QUADRANT',
+        this.add.text(width * 0.46, height * 0.77, [
+            'ANOMALY: DESTROYED',
             'OBJECTIVE: SALVAGE COLLECTION',
             'THREAT LEVEL: LOW',
             'ESTIMATED SALVAGE VALUE: MEDIUM',
@@ -110,22 +118,22 @@ export default class CommandCenterScene extends Phaser.Scene {
         
         // Create action buttons
         // Start Haul button
-        const startHaulButton = this.add.rectangle(width * 0.3, height * 0.85, 200, 60, 0x005500)
+        const startHaulButton = this.add.rectangle(width * 0.15, height * 0.85, 400, 100, 0x005500)
             .setStrokeStyle(2, 0x00ff00)
             .setInteractive({ useHandCursor: true });
             
-        this.add.text(width * 0.3, height * 0.85, 'START HAUL', {
+        this.add.text(width * 0.15, height * 0.85, 'START HAUL', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#00ff00'
         }).setOrigin(0.5);
         
         // Return to Base button
-        const returnButton = this.add.rectangle(width * 0.7, height * 0.85, 200, 60, 0x550000)
+        const returnButton = this.add.rectangle(width * 0.85, height * 0.85, 400, 100, 0x550000)
             .setStrokeStyle(2, 0xff0000)
             .setInteractive({ useHandCursor: true });
             
-        this.add.text(width * 0.7, height * 0.85, 'RETURN TO BASE', {
+        this.add.text(width * 0.85, height * 0.85, 'RETURN TO BASE', {
             fontFamily: 'Arial',
             fontSize: '24px',
             color: '#ff0000'
@@ -134,7 +142,7 @@ export default class CommandCenterScene extends Phaser.Scene {
         // Add button events
         startHaulButton.on('pointerdown', () => {
             console.log('Starting new haul');
-            this.scene.start('GameScene');
+            this.scene.start('IntroVideoScene');
         });
         
         startHaulButton.on('pointerover', () => {

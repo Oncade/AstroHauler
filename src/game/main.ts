@@ -4,10 +4,11 @@ import BootScene from './scenes/BootScene';
 import PreloaderScene from './scenes/PreloaderScene';
 import MainMenuScene from './scenes/MainMenuScene';
 import CommandCenterScene from './scenes/CommandCenterScene';
+import IntroVideoScene from './scenes/IntroVideoScene';
 import GameScene from './scenes/GameScene';
 import GameOverScene from './scenes/GameOverScene';
 
-const scenes = [BootScene, PreloaderScene, MainMenuScene, CommandCenterScene, GameScene, GameOverScene];
+const scenes = [BootScene, PreloaderScene, MainMenuScene, CommandCenterScene, IntroVideoScene, GameScene, GameOverScene];
 
 const config: Phaser.Types.Core.GameConfig = {
     ...GameConfig,
