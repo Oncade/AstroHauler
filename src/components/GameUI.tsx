@@ -46,35 +46,38 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
         position: 'absolute' as 'absolute',
         top: '10px',
         left: '10px',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         color: 'white',
         padding: isMobile ? '5px 10px' : '10px 20px',
         borderRadius: '5px',
         fontFamily: 'Arial, sans-serif',
         fontSize: isMobile ? '18px' : '24px',
-        zIndex: 100
+        zIndex: 100,
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
     };
     
     const instructionsButtonStyle = {
         position: 'absolute' as 'absolute',
         top: '10px',
         right: '10px',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         color: '#00ff00',
-        padding: isMobile ? '3px 10px' : '5px 15px',
+        padding: isMobile ? '8px 15px' : '5px 15px',
         borderRadius: '5px',
         fontFamily: 'Arial, sans-serif',
         cursor: 'pointer',
         border: '1px solid #00ff00',
-        fontSize: isMobile ? '14px' : '16px',
-        zIndex: 100
+        fontSize: isMobile ? '16px' : '16px',
+        zIndex: 100,
+        boxShadow: '0 0 8px rgba(0, 255, 0, 0.3)'
     };
     
     const instructionsPanelStyle = {
         position: 'absolute' as 'absolute',
-        top: isMobile ? '40px' : '50px',
+        top: isMobile ? '55px' : '50px',
         right: '10px',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
         color: 'white',
         padding: '15px',
         borderRadius: '5px',
@@ -83,14 +86,15 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
         width: isMobile && isPortrait ? 'calc(100% - 40px)' : 'auto',
         fontSize: isMobile ? '14px' : '16px',
         border: '1px solid #00ff00',
-        zIndex: 1000
+        zIndex: 1000,
+        boxShadow: '0 0 15px rgba(0, 0, 0, 0.7)'
     };
     
     const helpContainerStyle = {
         position: 'absolute' as 'absolute',
         top: isMobile && isPortrait ? '50px' : '80px',
         left: '10px',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
         color: '#00ff00',
         padding: isMobile ? '10px' : '15px',
         borderRadius: '5px',
@@ -102,6 +106,38 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
         boxShadow: '0 0 10px #00ff00',
         zIndex: 100
     };
+
+    // Mobile orientation warning style (improved visibility)
+    const orientationWarningStyle = {
+        position: 'absolute' as 'absolute',
+        bottom: '60px',  // Move up to avoid touch controls
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        color: '#ffff00',
+        padding: '12px 15px',
+        borderRadius: '8px',
+        fontFamily: 'Arial, sans-serif',
+        textAlign: 'center' as 'center',
+        maxWidth: '80%',
+        fontSize: '14px',
+        border: '2px solid #ffff00',
+        zIndex: 120,
+        boxShadow: '0 0 20px rgba(255, 255, 0, 0.4)'
+    };
+    
+    // Avoid UI elements overlapping with touch controls on mobile
+    if (isMobile) {
+        // Check if in portrait mode and adjust positions
+        if (isPortrait) {
+            // Move score display down slightly in portrait mode
+            scoreContainerStyle.top = '50px';
+        } else {
+            // In landscape mode, make sure score doesn't interfere with joystick
+            scoreContainerStyle.top = '10px';
+            scoreContainerStyle.left = '80px'; // Move right to avoid joystick area
+        }
+    }
     
     return (
         <div>
@@ -201,22 +237,7 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
 
             {/* Mobile Orientation Warning (shown only in mobile portrait mode) */}
             {isMobile && isPortrait && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    color: '#ffff00',
-                    padding: '10px 15px',
-                    borderRadius: '5px',
-                    fontFamily: 'Arial, sans-serif',
-                    textAlign: 'center',
-                    maxWidth: '90%',
-                    fontSize: '14px',
-                    border: '1px solid #ffff00',
-                    zIndex: 100
-                }}>
+                <div style={orientationWarningStyle}>
                     <p style={{ margin: '0' }}>
                         <span style={{ fontSize: '16px' }}>📱 Rotate your device!</span><br />
                         For a better game experience, use landscape orientation.

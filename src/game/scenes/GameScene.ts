@@ -307,14 +307,24 @@ export default class GameScene extends Phaser.Scene {
     createTouchControls() {
         const { width, height } = this.scale;
         
-        // Apply responsive sizing based on device
-        const joystickSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.joystickSize);
-        const buttonSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.buttonSize);
+        // Apply responsive sizing based on device - use mobile factor for mobile devices
+        const joystickSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.joystickSize, this.isMobileDevice);
+        const buttonSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.buttonSize, this.isMobileDevice);
         
         // Calculate positions for buttons - adapted for different screen sizes and orientations
         let tetherX, tetherY, thrustX, thrustY;
         
-        if (this.screenOrientation === 'portrait') {
+        if (this.isMobileDevice) {
+            // Use percentage-based positioning for mobile devices
+            tetherX = width * TouchControlsConfig.mobilePositioning.tether.x;
+            tetherY = height * TouchControlsConfig.mobilePositioning.tether.y;
+            thrustX = width * TouchControlsConfig.mobilePositioning.thrust.x;
+            thrustY = height * TouchControlsConfig.mobilePositioning.thrust.y;
+            
+            // Log the positions for debugging
+            console.log(`Mobile button positions - width: ${width}, height: ${height}`);
+            console.log(`Tether: (${tetherX}, ${tetherY}), Thrust: (${thrustX}, ${thrustY})`);
+        } else if (this.screenOrientation === 'portrait') {
             // Portrait mode - buttons at bottom of screen
             tetherX = width - buttonSize;
             tetherY = height - buttonSize * 1.5;
@@ -378,6 +388,23 @@ export default class GameScene extends Phaser.Scene {
             .setScale(buttonSize / 100)
             .setInteractive()
             .setTint(TouchControlsConfig.colors.normal);
+
+        // Add visual outlines to buttons on mobile to make them more visible
+        if (this.isMobileDevice) {
+            // Create a glowing outline for the tether button
+            const tetherOutline = this.add.graphics()
+                .setScrollFactor(0)
+                .setDepth(999);
+            tetherOutline.lineStyle(3, 0x88ffff, 0.8);
+            tetherOutline.strokeCircle(tetherX, tetherY, buttonSize/2 + 5);
+            
+            // Create a glowing outline for the thrust button
+            const thrustOutline = this.add.graphics()
+                .setScrollFactor(0)
+                .setDepth(999);
+            thrustOutline.lineStyle(3, 0xffaa44, 0.8);
+            thrustOutline.strokeCircle(thrustX, thrustY, buttonSize/2 + 5);
+        }
         
         // Tether button events
         this.tetherButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {

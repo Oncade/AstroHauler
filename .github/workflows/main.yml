@@ -51,8 +51,8 @@ jobs:
         # No need for 'folder' or 'branch' inputs anymore
         # The action automatically uses the artifact uploaded in the previous step
 
-#      - name: Deploy to GitHub Pages
-#        uses: JamesIves/github-pages-deploy-action@v4
-#        with:
-#          folder: dist
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
 #          branch: gh-pages 

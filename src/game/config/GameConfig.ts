@@ -19,8 +19,8 @@ export const DeviceDetection = {
 export const ResponsiveConfig = {
     // Size multipliers based on screen size categories
     sizeMultiplier: {
-        small: 0.6,  // For phones
-        medium: 0.8, // For small tablets
+        small: 0.8,  // For phones - increased from 0.6
+        medium: 0.9, // For small tablets - increased from 0.8
         large: 1.0   // For large tablets and desktops
     },
     // Threshold breakpoints in pixels
@@ -37,7 +37,9 @@ export const ResponsiveConfig = {
             return ResponsiveConfig.sizeMultiplier.medium;
         }
         return ResponsiveConfig.sizeMultiplier.large;
-    }
+    },
+    // Mobile-specific button size factor (makes buttons larger on mobile)
+    mobileButtonSizeFactor: 1.5
 };
 
 // Define configuration constants
@@ -104,7 +106,7 @@ export const TouchControlsConfig = {
     buttonSize: 100,            // Size of virtual buttons in pixels
     joystickHitArea: 200,       // Size of the joystick's interactive area (larger than visible area)
     buttonHitArea: 150,         // Size of the tether button's interactive area (larger than visible)
-    opacity: 0.7,               // Opacity of touch controls
+    opacity: 0.75,              // Opacity of touch controls - increased from 0.7 for better visibility
     joystickPosition: {
         x: 150,                 // Position from left edge
         y: -150                 // Position from bottom edge (negative for bottom positioning)
@@ -116,6 +118,17 @@ export const TouchControlsConfig = {
     thrustButtonPosition: {
         x: -280,                // Position from right edge (negative for right positioning)
         y: -150                 // Position from bottom edge (negative for bottom positioning)
+    },
+    // Mobile-specific positioning (percentage of screen width/height)
+    mobilePositioning: {
+        tether: {
+            x: 0.95,            // 95% from left (5% from right)
+            y: 0.85             // 85% from top (15% from bottom)
+        },
+        thrust: {
+            x: 0.80,            // 80% from left (20% from right)
+            y: 0.85             // 85% from top (15% from bottom)
+        }
     },
     thrustParameters: {
         initialForce: 20,       // Reduced initial thrust force
@@ -141,8 +154,10 @@ export const TouchControlsConfig = {
         buttonSafeZone: 70      // Distance in pixels to keep joystick away from buttons
     },
     // Get responsive size based on screen dimensions
-    getResponsiveSize: (baseSize: number): number => {
-        return baseSize * ResponsiveConfig.getMultiplier();
+    getResponsiveSize: (baseSize: number, isMobile: boolean = false): number => {
+        // Apply additional size factor for mobile buttons
+        const mobileFactor = isMobile ? ResponsiveConfig.mobileButtonSizeFactor : 1.0;
+        return baseSize * ResponsiveConfig.getMultiplier() * mobileFactor;
     }
 };
 
