@@ -5,6 +5,7 @@ export default class CommandCenterScene extends Phaser.Scene {
     private totalSpaceBucks: number = 0;
     private shipLevel: number = 1;
     private planetVideo!: Phaser.GameObjects.Video;
+    private planetVideos: string[] = ['Planet1991', 'Planet4626', 'Planet8631'];
 
     constructor() {
         super('CommandCenterScene');
@@ -14,8 +15,10 @@ export default class CommandCenterScene extends Phaser.Scene {
         // Load the command center background image
         this.load.image('commandCenterBg', 'assets/CommandCenter.png');
         
-        // Load the planet video
-        this.load.video('planetVideo', 'assets/video/Planet1991.mp4');
+        // Load all planet videos
+        this.planetVideos.forEach(video => {
+            this.load.video(video, `assets/video/${video}.mp4`);
+        });
     }
 
     init() {
@@ -48,7 +51,10 @@ export default class CommandCenterScene extends Phaser.Scene {
         const videoWidth = width * VIDEO_RATIO.width * VIDEO_RATIO.scale; // 1/2 of screen width
         const videoHeight = height * VIDEO_RATIO.height * VIDEO_RATIO.scale; // 4:3 aspect ratio
         
-        this.planetVideo = this.add.video(width/2.2, height/2.55, 'planetVideo');
+        // Select a random planet video
+        const randomVideo = Phaser.Math.RND.pick(this.planetVideos);
+        
+        this.planetVideo = this.add.video(width/2.2, height/2.55, randomVideo);
         this.planetVideo.setDisplaySize(videoWidth, videoHeight);
         this.planetVideo.play(true); // true enables looping
         
