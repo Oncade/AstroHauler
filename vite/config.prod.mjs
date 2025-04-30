@@ -18,7 +18,7 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: 'https://oncade.github.io/phaser_integration/',
+    base: 'https://oncade.github.io/AstroHauler/',
     plugins: [
         react(),
         phasermsg()
