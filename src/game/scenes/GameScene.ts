@@ -891,6 +891,26 @@ export default class GameScene extends Phaser.Scene {
             // Optional: Play a failure sound/effect
         }
     }
+    
+    // Update the tether color
+    updateTetherColor(color: number) {
+        if (this.activeTether) {
+            // Call the updateTetherColor method on the active tether
+            if (typeof this.activeTether.updateTetherColor === 'function') {
+                this.activeTether.updateTetherColor(color);
+            }
+        }
+    }
+    
+    // Toggle tether color cycling
+    toggleTetherColorCycling() {
+        if (this.activeTether && typeof this.activeTether.toggleColorCycling === 'function') {
+            const isEnabled = this.activeTether.toggleColorCycling();
+            console.log(`Tether color cycling: ${isEnabled ? 'enabled' : 'disabled'}`);
+            return isEnabled;
+        }
+        return false;
+    }
 
     // Create a physics collider for the deposit zone
     createDepositZoneCollider() {

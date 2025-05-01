@@ -84,6 +84,9 @@ export default class PreloaderScene extends Phaser.Scene {
         
         // Load particle effects
         this.load.image('thruster_particle', 'assets/vfx/thruster_particle.png');
+        
+        // Load tether atlas
+        this.load.atlas('tether', 'assets/vfx/tether_atlas.png', 'assets/vfx/tether_atlas.json');
 
         // Load audio assets
         this.load.audio('menuMusic', 'assets/audio/CosmicDrifter.mp3');

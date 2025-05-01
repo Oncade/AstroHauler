@@ -98,6 +98,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.isTethered = true;
         this.tetheredObject = salvage;
         this.rangeIndicator.setVisible(false); // Hide indicator when tethered
+        
+        // If there's an active scene tether, play the reattach animation
+        const sceneTether = (this.scene as any).activeTether;
+        if (sceneTether && typeof sceneTether.playReattachAnimation === 'function') {
+            sceneTether.playReattachAnimation();
+        }
+        
         console.log('Player: Tether attached');
         // No need to reset acceleration - allows thrust to continue working
     }

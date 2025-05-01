@@ -163,15 +163,72 @@ export const TouchControlsConfig = {
 
 // Tether Config
 export const TetherConfig = {
+    // Physics properties
     maxLength: 150,         // Fixed distance between player and salvage (pixels)
-    lineWidth: 2,
-    lineColor: 0x00ff00,     // Green tether line
     maxAttachDistance: 150, // Max distance player can be from salvage to attach tether
-    attachRangeIndicatorColor: 0x00ff00, // Color of the visual range indicator
-    attachRangeIndicatorAlpha: 0.25,    // Alpha/transparency of the range indicator
     towForce: 100,          // Force applied to towed salvage
     towDamping: 0.1,        // Damping factor for smoother movement
+    
+    // Visual properties
+    lineWidth: 2,
+    lineColor: 0x00ff00,     // Green tether line
+    attachRangeIndicatorColor: 0x3df2b0, // Color of the visual range indicator
+    attachRangeIndicatorAlpha: 0.25,    // Alpha/transparency of the range indicator
+    
+    // Enhanced visual properties
+    segments: 14,            // Increased number of segments for smoother curve
+    glowColor: 0x3df2b0,     // Base glow color (#3df2b0)
+    highlightColor: 0xf2168f, // Secondary glow color (#f2168f)
+    strainThreshold: 1,    // Tension threshold for strain effects (0.0-1.0)
+    sparkColor: 0xae2abf,    // Color for max-strain spark (#ae2abf)
+    blendMode: 1,            // Blend mode for segments (1 = ADD)
+    segmentThickness: 4.5,   // Base thickness of tether segments
+    pulseThicknessMax: 5.2,  // Maximum thickness during pulse animation
+    
+    // Predefined color options
+    colorOptions: {
+        default: 0x3df2b0,  // Default teal color
+        blue: 0x1e18d9,     // Cyan blue
+        purple: 0xae2abf,   // Bright purple
+        green: 0x3df2b0,    // Bright green
+        red: 0xe7552c,      // Pinkish red
+        yellow: 0xf4bf56,   // Gold yellow
+        white: 0xfffBFA     // Pure white
+    } as const,
+    
+    // Animation properties
+    glowFrameRate: 24,       // Frames per second for glow animation
+    breakFrameRate: 12,      // Frames per second for break animation
+    reattachFrameRate: 12,   // Frames per second for reattach animation
+    
+    // Particle effects
+    particleLifespan: 500,   // Lifespan of break particles in ms
+    particleCount: 4,        // Increased number of particles to emit on break
+    particleSpeed: { min: 20, max: 50 }, // Speed range for particles
+    
+    // Energy flow effects
+    energyParticleFrequency: 100, // Time between energy particle emissions (ms)
+    energyParticleSpeed: 200,    // Speed of energy particles
+    pulseDuration: 10,          // Duration of pulse animation (ms)
+    curveAmount: 0.1,            // Amount of curve in the tether (0-1)
 };
+
+// Type for color names
+type TetherColorName = keyof typeof TetherConfig.colorOptions;
+
+// Function to get tether color by name
+export function getTetherColorByName(colorName: string): number {
+    // Convert to lowercase and check if it's a valid color name
+    const normalizedName = colorName.toLowerCase() as TetherColorName;
+    
+    // Check if the color name exists in the options
+    if (normalizedName in TetherConfig.colorOptions) {
+        return TetherConfig.colorOptions[normalizedName];
+    }
+    
+    // Return default if color name not found
+    return TetherConfig.colorOptions.default;
+}
 
 // Background Config
 export const BackgroundConfig = {
