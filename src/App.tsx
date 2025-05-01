@@ -5,6 +5,7 @@ import { MainMenu } from './components/MainMenu';
 import { CommandCenter } from './components/CommandCenter';
 import { GameUI } from './components/GameUI';
 import { GameOverScreen } from './components/GameOverScreen';
+import InstallButton from './components/InstallButton';
 
 function App() {
     // Game state
@@ -74,6 +75,7 @@ function App() {
             <PhaserGame ref={phaserRef} currentActiveScene={currentSceneActive} />
             <div>
                 {renderUI()}
+                <InstallButton />
                 {/* Original template example text - can be removed */}
                 {/* <div>
                     <p>Sprite Position:</p>
