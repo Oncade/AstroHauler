@@ -86,40 +86,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Debug text removed
 
-        // Create thrust button texture if it doesn't exist
-        if (!this.textures.exists('thrust-button')) {
-            console.log('Creating thrust-button texture');
-            // Create texture size 100x100
-            const radius = 50;
-            const graphics = this.add.graphics();
-            
-            // Create circular button with rocket icon
-            graphics.fillStyle(0x333333, 1);
-            graphics.fillCircle(radius, radius, radius);
-            
-            // Add a rocket/thrust icon
-            graphics.fillStyle(0xffcc00, 1);
-            
-            // Draw rocket shape
-            graphics.fillRect(radius - 15, radius - 25, 30, 40); // Rocket body
-            graphics.fillTriangle(
-                radius - 15, radius + 15, // Left point
-                radius + 15, radius + 15, // Right point
-                radius, radius + 30      // Bottom point
-            );
-            
-            // Add thrust flames
-            graphics.fillStyle(0xff3300, 1);
-            graphics.fillTriangle(
-                radius - 10, radius + 15, // Left point
-                radius + 10, radius + 15, // Right point
-                radius, radius + 40      // Bottom point
-            );
-            
-            // Generate texture
-            graphics.generateTexture('thrust-button', 100, 100);
-            graphics.destroy();
-        }
+        // The thrust-button image is already loaded in PreloaderScene,
+        // so we don't need to create it here
 
         // Load persisted total SpaceBucks if available
         this.loadTotalSpaceBucks();
