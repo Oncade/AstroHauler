@@ -28,6 +28,7 @@ export default class GameScene extends Phaser.Scene {
     private activeTether: Tether | null = null;
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
+    private hasPlayerLeftExitZone: boolean = false;
 
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
@@ -106,17 +107,26 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0, 0)
             .setScrollFactor(0); // Keep fixed relative to camera
 
-        // Create Player
-        this.player = new Player(this, width * 0.5, height * 0.5); // Start near center
-
-        // Create Parent Ship
+        // Create Parent Ship first
         this.parentShip = new ParentShip(this, ParentShipConfig.spawnX, ParentShipConfig.spawnY);
 
         // Create a separate physics body for the deposit zone
         this.createDepositZoneCollider();
         
-        // Create exit zone for ending the haul
+        // Create exit zone first, before player spawn
         this.createExitZoneCollider();
+        
+        // Get exit zone position for player spawn
+        const exitZonePos = {
+            x: this.parentShip.x - 400, // Offset from parent ship
+            y: this.parentShip.y - 250
+        };
+        
+        // Create Player at exit zone position
+        this.player = new Player(this, exitZonePos.x, exitZonePos.y);
+        
+        // Set player's initial rotation to face right (90 degrees clockwise from facing up)
+        this.player.setRotation(0); // 0 degrees = facing right
 
         // Create Salvage Group
         this.salvageGroup = this.physics.add.group({
@@ -124,10 +134,25 @@ export default class GameScene extends Phaser.Scene {
             runChildUpdate: false // Salvage update logic is mainly driven by tether/physics
         });
 
-        // Spawn initial salvage items
+        // Calculate safe spawn distance from parent ship
+        const safeDistance = 200; // Minimum distance from parent ship
+
+        // Spawn initial salvage items (avoiding parent ship)
         for (let i = 0; i < SalvageConfig.spawnCount; i++) {
-            const x = Phaser.Math.Between(50, worldWidth - 50);
-            const y = Phaser.Math.Between(50, worldHeight - 50);
+            let x, y, distanceToShip;
+            
+            // Keep trying positions until we find one far enough from the parent ship
+            do {
+                x = Phaser.Math.Between(50, worldWidth - 50);
+                y = Phaser.Math.Between(50, worldHeight - 50);
+                
+                // Calculate distance from this point to parent ship
+                distanceToShip = Phaser.Math.Distance.Between(
+                    x, y, 
+                    this.parentShip.x, this.parentShip.y
+                );
+            } while (distanceToShip < safeDistance);
+            
             const mass = getRandomSalvageMass();
             const textureKey = getRandomSalvageTexture();
             const salvageItem = new Salvage(this, x, y, mass, textureKey);
@@ -1181,7 +1206,7 @@ export default class GameScene extends Phaser.Scene {
         
         // Set up the physics body
         this.exitZone.setCircle(radius)
-                    .setVisible(true)
+                    .setVisible(false) // Initially hidden
                     .setImmovable(true)
                     .setAlpha(0.5);
                     
@@ -1195,16 +1220,9 @@ export default class GameScene extends Phaser.Scene {
             body.checkCollision.left = false;
             body.checkCollision.right = false;
         }
-        /*
-        // Add label for the exit zone
-        this.add.text(exitZonePos.x, exitZonePos.y - radius - 20, 'END HAUL', {
-            fontFamily: '"Roboto Mono", "Courier New", monospace',
-            fontSize: '18px',
-            color: '#ff5555',
-            backgroundColor: '#333333',
-            padding: { left: 5, right: 5, top: 2, bottom: 2 }
-        }).setOrigin(0.5).setScrollFactor(1);
-        */
+
+        // Initialize the player exit zone tracking flag
+        this.hasPlayerLeftExitZone = false;
     }
     
     // Check if player is in the exit zone
@@ -1219,10 +1237,20 @@ export default class GameScene extends Phaser.Scene {
             playerBounds
         );
         
+        // Handle player leaving exit zone for first time
+        if (!boundsOverlap && !this.hasPlayerLeftExitZone) {
+            this.hasPlayerLeftExitZone = true;
+            
+            // Show exit zone once player has left it for the first time
+            this.exitZone.setVisible(true);
+            console.log('Player left exit zone, making it visible');
+        }
+        
         // Get reference to existing prompt if it exists
         const exitPrompt = this.children.getByName('exitPrompt');
         
-        if (boundsOverlap) {
+        if (boundsOverlap && this.hasPlayerLeftExitZone) {
+            // Only show exit zone functionality after player has left it once and returned
             // Check player's velocity to see if they're almost stopped
             const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
             const velocityMagnitude = Math.sqrt(
