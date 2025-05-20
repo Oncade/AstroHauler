@@ -84,26 +84,7 @@ export default class GameScene extends Phaser.Scene {
         
         console.log(`Device detection: Touch: ${this.isTouchDevice}, Mobile: ${this.isMobileDevice}, Orientation: ${this.screenOrientation}, Size Multiplier: ${this.deviceMultiplier}`);
 
-        // Add debug text for mobile touch debugging
-        if (this.isMobileDevice || this.isTouchDevice) {
-            this.add.text(10, 50, 'TOUCH DEBUG', {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '18px',
-                color: '#ffff00'
-            }).setScrollFactor(0).setDepth(2000);
-
-            // Add camera zoom debug text
-            const zoomText = this.add.text(10, 80, `Camera Zoom: ${this.cameras.main.zoom.toFixed(2)}`, {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '16px',
-                color: '#00ffff'
-            }).setScrollFactor(0).setDepth(2000);
-
-            // Update zoom text on camera changes
-            this.events.on('update', () => {
-                zoomText.setText(`Camera Zoom: ${this.cameras.main.zoom.toFixed(2)}`);
-            });
-        }
+        // Debug text removed
 
         // Create thrust button texture if it doesn't exist
         if (!this.textures.exists('thrust-button')) {
@@ -218,7 +199,7 @@ export default class GameScene extends Phaser.Scene {
             this.checkDepositEligibility, // Process callback to check if tethered - now checks only overlap
             this
         );
-
+/*
         // UI Elements
         this.scoreText = this.add.text(16, 16, 'Score: 0', {
             fontFamily: '"Roboto Mono", "Courier New", monospace',
@@ -229,7 +210,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Update Phaser score text after reset
         this.scoreText.setText('Score: ' + this.score);
-
+*/
         const exitButton = this.add.text(width - 200, 100, '[ Exit ]', {
             fontSize: '24px',
             color: '#ff0000',
@@ -970,14 +951,7 @@ export default class GameScene extends Phaser.Scene {
             body.checkCollision.right = false;
         }
         
-        // Add debug text to monitor overlap
-        const debugText = this.add.text(10, 120, 'Deposit Zone Ready', {
-            fontFamily: '"Roboto Mono", "Courier New", monospace',
-            fontSize: '18px',
-            color: '#ffff00'
-        }).setScrollFactor(0);
-        
-        // Update debug text every frame
+        // Monitor deposit zone overlaps for gameplay logic (debug text removed)
         this.events.on('update', () => {
             let activeOverlaps = 0;
             let tetheredOverlaps = 0;
@@ -994,8 +968,6 @@ export default class GameScene extends Phaser.Scene {
                     }
                 }
             });
-            
-            debugText.setText(`Deposit Zone: ${activeOverlaps} overlaps, ${tetheredOverlaps} eligible`);
         });
     }
 
@@ -1193,8 +1165,8 @@ export default class GameScene extends Phaser.Scene {
     createExitZoneCollider() {
         // Position the exit zone on the opposite side of the parent ship
         const exitZonePos = {
-            x: this.parentShip.x + 300, // Offset from parent ship
-            y: this.parentShip.y 
+            x: this.parentShip.x - 400, // Offset from parent ship
+            y: this.parentShip.y - 250
         };
         const radius = 100 * (this.isMobileDevice ? 1.2 : 1.0); // Slightly larger on mobile
 
@@ -1255,7 +1227,7 @@ export default class GameScene extends Phaser.Scene {
             body.checkCollision.left = false;
             body.checkCollision.right = false;
         }
-        
+        /*
         // Add label for the exit zone
         this.add.text(exitZonePos.x, exitZonePos.y - radius - 20, 'END HAUL', {
             fontFamily: '"Roboto Mono", "Courier New", monospace',
@@ -1264,6 +1236,7 @@ export default class GameScene extends Phaser.Scene {
             backgroundColor: '#333333',
             padding: { left: 5, right: 5, top: 2, bottom: 2 }
         }).setOrigin(0.5).setScrollFactor(1);
+        */
     }
     
     // Check if player is in the exit zone
@@ -1278,9 +1251,32 @@ export default class GameScene extends Phaser.Scene {
             playerBounds
         );
         
+        // Get reference to existing prompt if it exists
+        const exitPrompt = this.children.getByName('exitPrompt');
+        
         if (boundsOverlap) {
-            // Player is in exit zone, end the haul
-            this.showExitPrompt();
+            // Check player's velocity to see if they're almost stopped
+            const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+            const velocityMagnitude = Math.sqrt(
+                playerBody.velocity.x * playerBody.velocity.x + 
+                playerBody.velocity.y * playerBody.velocity.y
+            );
+            
+            // Only show prompt if velocity is below threshold (almost stopped)
+            const velocityThreshold = 50; // Adjust this value as needed
+            
+            if (velocityMagnitude <= velocityThreshold) {
+                // Player is in exit zone and almost stopped, show the prompt
+                if (!exitPrompt) {
+                    this.showExitPrompt();
+                }
+            } else if (exitPrompt) {
+                // Player is moving too fast, hide prompt if visible
+                this.hideExitPrompt();
+            }
+        } else if (exitPrompt) {
+            // Player has left the exit zone while prompt was visible, hide it
+            this.hideExitPrompt();
         }
     }
     
@@ -1311,7 +1307,7 @@ export default class GameScene extends Phaser.Scene {
                 color: '#ffffff',
                 align: 'center'
             }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setName('exitPromptText');
         
         const confirmButton = this.add.text(
             width / 2 - 80, 
@@ -1327,7 +1323,8 @@ export default class GameScene extends Phaser.Scene {
         ).setOrigin(0.5)
          .setScrollFactor(0)
          .setDepth(1001)
-         .setInteractive();
+         .setInteractive()
+         .setName('exitPromptYesBtn');
         
         const cancelButton = this.add.text(
             width / 2 + 80, 
@@ -1343,7 +1340,8 @@ export default class GameScene extends Phaser.Scene {
         ).setOrigin(0.5)
          .setScrollFactor(0)
          .setDepth(1001)
-         .setInteractive();
+         .setInteractive()
+         .setName('exitPromptNoBtn');
         
         // Button event handlers
         confirmButton.on('pointerdown', () => {
@@ -1352,10 +1350,7 @@ export default class GameScene extends Phaser.Scene {
         
         cancelButton.on('pointerdown', () => {
             // Remove the prompt elements
-            promptBg.destroy();
-            promptText.destroy();
-            confirmButton.destroy();
-            cancelButton.destroy();
+            this.hideExitPrompt();
         });
         
         // Add hover effects
@@ -1364,6 +1359,20 @@ export default class GameScene extends Phaser.Scene {
         
         cancelButton.on('pointerover', () => cancelButton.setStyle({ backgroundColor: '#770000' }));
         cancelButton.on('pointerout', () => cancelButton.setStyle({ backgroundColor: '#333333' }));
+    }
+
+    // Hide the exit prompt when player leaves the exit zone
+    hideExitPrompt() {
+        const promptBg = this.children.getByName('exitPrompt');
+        const promptText = this.children.getByName('exitPromptText');
+        const confirmButton = this.children.getByName('exitPromptYesBtn');
+        const cancelButton = this.children.getByName('exitPromptNoBtn');
+        
+        // Destroy all prompt elements if they exist
+        if (promptBg) promptBg.destroy();
+        if (promptText) promptText.destroy();
+        if (confirmButton) confirmButton.destroy();
+        if (cancelButton) cancelButton.destroy();
     }
 
     // Helper method to stop thrust and reset values

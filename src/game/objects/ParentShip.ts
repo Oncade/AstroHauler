@@ -55,7 +55,7 @@ export default class ParentShip extends Phaser.Physics.Arcade.Image { // Use Ima
         // Add "DEPOSIT" text
         this.depositText = this.scene.add.text(
             this.depositZonePosition.x, 
-            this.depositZonePosition.y + 70, 
+            this.depositZonePosition.y + 200, 
             'DEPOSIT ZONE', 
             {
                 fontSize: '24px',
@@ -111,7 +111,7 @@ export default class ParentShip extends Phaser.Physics.Arcade.Image { // Use Ima
         // Now create the sprite with the generated texture
         this.depositIndicator = this.scene.add.sprite(
             this.depositZonePosition.x, 
-            this.depositZonePosition.y - 80, 
+            this.depositZonePosition.y + 150, 
             'deposit-arrow'
         );
         
