@@ -43,7 +43,17 @@ export default class MainMenuScene extends Phaser.Scene {
             .setOrigin(0, 1)
             .setScale(0.5);
 
-
+        // Add wanderers logo
+        const wanderersLogo = this.add.image(width/2, height/2, 'wanderers_white')
+            .setOrigin(-1.55, -0.8)
+            .setScale(0.1);
+            
+        // Add plus sign between logos
+        const plusSign = this.add.text(width / 2, height/2, '+', { 
+            font: '72px Arial', 
+            color: '#ffffff' 
+        }).setOrigin(-17.5, -4.5);
+        
         const logo = this.add.image(width / 2, height - 75, 'bootLogo') // Positioned 50px from bottom
             .setOrigin(-1.1, .5) // Set origin to bottom-center
             .setScale(0.25); // Scale it down
