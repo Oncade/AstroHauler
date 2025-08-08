@@ -27,6 +27,17 @@ export default class Salvage extends Phaser.Physics.Arcade.Sprite {
         this.setDrag(0); // No drag in space
         this.setAngularDrag(0); // No angular drag in space
 
+        // Add a little initial rotation and drift to bring objects to life
+        const initialAngularVelocity = Phaser.Math.FloatBetween(-60, 60); // deg/sec
+        this.setAngularVelocity(initialAngularVelocity);
+        const driftSpeed = Phaser.Math.FloatBetween(10, 40);
+        const driftAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const driftVector = new Phaser.Math.Vector2();
+        scene.physics.velocityFromRotation(driftAngle, driftSpeed, driftVector);
+        if (this.body instanceof Phaser.Physics.Arcade.Body) {
+            this.body.setVelocity(driftVector.x, driftVector.y);
+        }
+
         // Tint based on mass (visual cue) - Simpler alpha approach
         const minAlpha = 0.5; // Min transparency for lightest items
         const maxAlpha = 1.0; // Max opacity for heaviest items

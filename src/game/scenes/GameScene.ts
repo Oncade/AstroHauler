@@ -5,7 +5,6 @@ import ParentShip from '../objects/ParentShip';
 import Tether from '../objects/Tether';
 import { EventBus } from '../EventBus';
 import {
-    GameConfig,
     ControlKeys,
     SalvageConfig,
     getRandomSalvageMass,
@@ -42,7 +41,6 @@ export default class GameScene extends Phaser.Scene {
     private tetherButton!: Phaser.GameObjects.Image;
     private thrustButton!: Phaser.GameObjects.Image;
     private isTouching: boolean = false;
-    private touchThrust: boolean = false;
     private isThrustButtonPressed: boolean = false;
     private currentThrustForce: number = 0;
     private thrustTween: Phaser.Tweens.Tween | null = null;
@@ -157,6 +155,15 @@ export default class GameScene extends Phaser.Scene {
             const textureKey = getRandomSalvageTexture();
             const salvageItem = new Salvage(this, x, y, mass, textureKey);
             this.salvageGroup.add(salvageItem, true);
+
+            // Ensure initial life after adding to physics group (in case defaults override)
+            const angVel = Phaser.Math.FloatBetween(-60, 60);
+            salvageItem.setAngularVelocity(angVel);
+            const driftSpeed = Phaser.Math.FloatBetween(20, 60);
+            const driftAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+            const driftVec = new Phaser.Math.Vector2();
+            this.physics.velocityFromRotation(driftAngle, driftSpeed, driftVec);
+            salvageItem.setVelocity(driftVec.x, driftVec.y);
         }
 
         // Setup Input Controls - Ensure keyboard plugin is ready
@@ -175,6 +182,28 @@ export default class GameScene extends Phaser.Scene {
         // Setup Touch Controls if on a touch device
         if (this.isTouchDevice) {
             this.createTouchControls();
+        } else {
+            // Desktop mouse setup
+            // Prevent context menu so right-click can be used for tether toggle
+            this.input.mouse?.disableContextMenu();
+
+            // Right-click toggles tether
+            this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                if (pointer.rightButtonDown()) {
+                    if (this.activeTether) {
+                        this.activeTether.destroy();
+                        this.activeTether = null;
+                        if (this.tetherButton) {
+                            this.tetherButton.setTint(TouchControlsConfig.colors.normal);
+                        }
+                    } else {
+                        this.attemptTetherAttach();
+                        if (this.activeTether && this.tetherButton) {
+                            this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                        }
+                    }
+                }
+            });
         }
 
         // Setup Collisions
@@ -415,7 +444,7 @@ export default class GameScene extends Phaser.Scene {
         }
         
         // Tether button events
-        this.tetherButton.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        this.tetherButton.on('pointerdown', () => {
             // Don't stop propagation as it might be interfering with touch events
             
             if (this.activeTether) {
@@ -534,7 +563,6 @@ export default class GameScene extends Phaser.Scene {
                 }
                 
                 this.isTouching = false;
-                this.touchThrust = false;
                 joystickPointerId = null;
                 
                 // Clear the direction indicator
@@ -710,7 +738,6 @@ export default class GameScene extends Phaser.Scene {
         
         this.joystick.inner.x = this.joystick.outer.x;
         this.joystick.inner.y = this.joystick.outer.y;
-        this.touchThrust = false;
         this.joystickAngle = 0;
         this.joystickDistance = 0;
         
@@ -720,25 +747,36 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    update(time: number, delta: number) {
+    update(_time: number, delta: number) {
         // --- Handle Input ---
-        // Handle rotation differently for keyboard vs. touch
+        // Handle rotation
         if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
             // Touch controls - rotate ship to face the direction of joystick movement
-            this.rotateShipTowards(this.targetRotation, delta);
+            this.rotateShipTowards(this.targetRotation, delta, this.joystickDistance);
         } else {
-            // Keyboard Controls for rotation
+            // Desktop: rotate towards mouse unless keyboard rotation is being used
             if (this.keys.left?.isDown) {
                 this.player.moveLeft();
             } else if (this.keys.right?.isDown) {
                 this.player.moveRight();
             } else {
-                this.player.stopRotation();
+                const pointer = this.input.activePointer;
+                if (pointer) {
+                    const { x: worldX, y: worldY } = this.getWorldPointerPosition(pointer);
+                    const angleToPointer = Math.atan2(worldY - this.player.y, worldX - this.player.x);
+                    // Adjust for ship sprite facing up at rotation 0
+                    const target = angleToPointer + Math.PI / 2;
+                    this.rotateShipTowards(target, delta);
+                } else {
+                    this.player.stopRotation();
+                }
             }
         }
 
-        // Handle thrust input differently for keyboard vs. touch
-        if (this.keys.thrust?.isDown) {
+        // Handle thrust (mouse left button, keyboard, or touch thrust button)
+        if (!this.isTouchDevice && this.input.activePointer?.leftButtonDown()) {
+            this.player.thrust();
+        } else if (this.keys.thrust?.isDown) {
             // Keyboard thrust - always in the direction the ship is facing
             this.player.thrust();
         } else if (this.isThrustButtonPressed) {
@@ -783,7 +821,7 @@ export default class GameScene extends Phaser.Scene {
     }
     
     // Helper method to smoothly rotate the ship towards a target angle
-    rotateShipTowards(targetAngle: number, delta: number) {
+    rotateShipTowards(targetAngle: number, delta: number, speedFactor: number = 1) {
         if (!this.player) return;
         
         // Normalize both angles to 0-2π for comparison
@@ -800,9 +838,8 @@ export default class GameScene extends Phaser.Scene {
             angleDiff += Math.PI * 2;
         }
         
-        // Calculate rotation speed based on joystick distance
-        // Further from center = faster rotation
-        const rotationSpeed = PlayerConfig.angularVelocity * this.joystickDistance;
+        // Calculate rotation speed; on touch use joystick distance, desktop uses full speed by default
+        const rotationSpeed = PlayerConfig.angularVelocity * speedFactor;
         
         // Convert delta to seconds for consistent motion
         const dt = delta / 1000;
@@ -965,7 +1002,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Process callback for deposit overlap
-    checkDepositEligibility(depositZone: any, salvage: any): boolean {
+    checkDepositEligibility(_depositZone: any, salvage: any): boolean {
         // We know the first parameter is the deposit zone, and second is salvage
         if (!(salvage instanceof Salvage) || !salvage.body) {
             console.log('Deposit check: invalid salvage object');
@@ -974,7 +1011,7 @@ export default class GameScene extends Phaser.Scene {
         
         // Basic overlap check - add extra validation using manual bounds check
         const boundsOverlap = Phaser.Geom.Intersects.RectangleToRectangle(
-            depositZone.getBounds(),
+            this.depositZone.getBounds(),
             salvage.getBounds()
         );
         
@@ -991,7 +1028,7 @@ export default class GameScene extends Phaser.Scene {
         return true;
     }
 
-    handleSalvageDeposit(depositZone: any, salvage: any) {
+    handleSalvageDeposit(_depositZone: any, salvage: any) {
         // We know the first parameter is the deposit zone, and second is salvage
         if (!(salvage instanceof Salvage) || !salvage.body) {
             console.log('Deposit attempt: invalid salvage object');
@@ -1284,7 +1321,7 @@ export default class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
         
         // Create prompt container
-        const promptBg = this.add.rectangle(
+        this.add.rectangle(
             width / 2, 
             height / 2, 
             400, 
@@ -1293,7 +1330,7 @@ export default class GameScene extends Phaser.Scene {
             0.8
         ).setScrollFactor(0).setDepth(1000).setName('exitPrompt');
         
-        const promptText = this.add.text(
+        this.add.text(
             width / 2, 
             height / 2 - 40, 
             'End this haul and return to base?', 
