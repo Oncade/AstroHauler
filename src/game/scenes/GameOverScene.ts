@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { EventBus } from '../EventBus';
+import { nextLevel, loadProgress } from '../config/MetaGame';
 
 interface GameOverData {
     score: number;
@@ -71,6 +72,8 @@ export default class GameOverScene extends Phaser.Scene {
 
         commandCenterButton.on('pointerdown', () => {
             console.log('Returning to Command Center');
+            // Progress to next level if possible
+            nextLevel();
             this.scene.start('CommandCenterScene');
         });
         commandCenterButton.on('pointerover', () => commandCenterButton.setStyle({ color: '#000000', backgroundColor: '#ffff00' }));
@@ -89,6 +92,7 @@ export default class GameOverScene extends Phaser.Scene {
 
         menuButton.on('pointerdown', () => {
             console.log('Returning to base - MainMenuScene');
+            nextLevel();
             this.scene.start('MainMenuScene');
         });
         menuButton.on('pointerover', () => menuButton.setStyle({ color: '#000000', backgroundColor: '#ffffff' }));
