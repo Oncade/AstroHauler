@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import Player from '../objects/Player';
 import Salvage from '../objects/Salvage';
 import ParentShip from '../objects/ParentShip';
-import Tether from '../objects/Tether';
+import { ITether, createTether } from '../objects/TetherFactory';
 import { EventBus } from '../EventBus';
 import {
     ControlKeys,
@@ -24,7 +24,7 @@ export default class GameScene extends Phaser.Scene {
     private player!: Player;
     private parentShip!: ParentShip;
     private salvageGroup!: Phaser.Physics.Arcade.Group;
-    private activeTether: Tether | null = null;
+    private activeTether: ITether | null = null;
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private hasPlayerLeftExitZone: boolean = false;
@@ -453,6 +453,14 @@ export default class GameScene extends Phaser.Scene {
             // Don't stop propagation as it might be interfering with touch events
             
             if (this.activeTether) {
+                // Allow active tether implementation to handle the press first (bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                        return;
+                    }
+                }
                 // If already tethered, release the tether
                 this.activeTether.destroy();
                 this.activeTether = null;
@@ -796,11 +804,18 @@ export default class GameScene extends Phaser.Scene {
         // --- Handle Tether Key Press ---
         if (Phaser.Input.Keyboard.JustDown(this.keys.tether)) {
             if (this.activeTether) {
-                // If already tethered, release the tether
+                // Allow active tether to handle press first (e.g., bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        if (this.tetherButton) this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                        return;
+                    }
+                }
+                // If not handled, default to release
                 this.activeTether.destroy();
                 this.activeTether = null;
                 console.log('Scene: Tether released by key press.');
-                // Update tether button visual if it exists
                 if (this.tetherButton) {
                     this.tetherButton.setTint(TouchControlsConfig.colors.normal);
                 }
@@ -900,7 +915,7 @@ export default class GameScene extends Phaser.Scene {
         if (distanceSq <= maxDistanceSq) {
             // No need to reset acceleration - this allows both objects to maintain their current momentum
             // Create the tether without modifying current physics state
-            this.activeTether = new Tether(this, this.player, closestSalvage);
+            this.activeTether = createTether(this, this.player, closestSalvage);
             console.log('Scene: Tether initiated by key press to nearest salvage.');
         } else {
             console.log('Scene: Nearest eligible salvage is out of range.');
