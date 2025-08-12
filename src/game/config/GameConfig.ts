@@ -173,7 +173,7 @@ export const TetherConfig = {
     lineWidth: 2,
     lineColor: 0x00ff00,     // Green tether line
     attachRangeIndicatorColor: 0x3df2b0, // Color of the visual range indicator
-    attachRangeIndicatorAlpha: 0.25,    // Alpha/transparency of the range indicator
+    attachRangeIndicatorAlpha: 0.5,    // Alpha/transparency of the range indicator
     
     // Enhanced visual properties
     segments: 14,            // Increased number of segments for smoother curve

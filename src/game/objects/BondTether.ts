@@ -55,6 +55,59 @@ export default class BondTether implements ITether {
     if (this.debugEnabled) this.updateDebugText();
   }
 
+  // Called when a salvage in the chain is deposited. If the deposited salvage is
+  // somewhere between the ship-attached node and the chain tail, drop the far side
+  // so only the segment between ship and deposited piece remains (excluding the
+  // deposited piece itself).
+  onSalvageDeposited?(salvage: Salvage): void {
+    const idx = this.chain.indexOf(salvage);
+    if (idx === -1) return; // Not part of this chain
+
+    // If the deposited piece is the one attached to the ship, let scene logic
+    // handle tether destruction; nothing to trim here.
+    if (idx === this.attachedIndex) return;
+
+    // Determine which side to keep so that the segment between ship and deposit remains.
+    if (idx > this.attachedIndex) {
+      // Keep [attachedIndex .. idx-1]; rebase attached to index 0.
+      const kept = this.chain.slice(this.attachedIndex, idx);
+      // End any lingering tether indicators on pieces we drop
+      for (let i = idx; i < this.chain.length; i++) {
+        const s = this.chain[i];
+        if (s && s.isTethered) s.endTether();
+      }
+      this.chain = kept;
+      this.attachedIndex = 0;
+    } else {
+      // idx < attachedIndex
+      // Keep [idx+1 .. attachedIndex]; attached becomes last index.
+      const kept = this.chain.slice(idx + 1, this.attachedIndex + 1);
+      for (let i = 0; i <= idx; i++) {
+        const s = this.chain[i];
+        if (s && s.isTethered) s.endTether();
+      }
+      this.chain = kept;
+      this.attachedIndex = this.chain.length - 1;
+    }
+
+    // Ensure only the currently attached salvage shows a tether indicator
+    for (let i = 0; i < this.chain.length; i++) {
+      if (i !== this.attachedIndex && this.chain[i].isTethered) {
+        this.chain[i].endTether();
+      }
+    }
+
+    // If the ship link target no longer matches the chain's attached node (e.g.,
+    // if the previously attached salvage was removed from chain somehow), rebuild it.
+    const attached = this.chain[this.attachedIndex];
+    if (attached && this.shipLink.getAttachedSalvage() !== attached) {
+      this.shipLink.destroy();
+      this.shipLink = new Tether(this.scene, this.player, attached);
+    }
+
+    this.logDebug(`Chain trimmed due to deposit. New length=${this.chain.length}, attachedIndex=${this.attachedIndex}`);
+  }
+
   destroy(): void {
     this.shipLink.destroy();
     this.bondsGraphics.destroy();

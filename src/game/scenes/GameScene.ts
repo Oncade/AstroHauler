@@ -1055,6 +1055,19 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Inform active tether (if bond chain) before we destroy or detach salvage
+        if (this.activeTether && typeof this.activeTether.onSalvageDeposited === 'function') {
+            // Only notify if the deposited salvage is not the current ship-attached node
+            try {
+                const attached = this.activeTether.getAttachedSalvage();
+                if (attached !== salvage) {
+                    this.activeTether.onSalvageDeposited(salvage);
+                }
+            } catch (e) {
+                console.warn('onSalvageDeposited callback failed:', e);
+            }
+        }
+
         console.log(`Scene: Attempting deposit for salvage value ${salvage.value}`);
         
         // Show deposit success effect
@@ -1139,6 +1152,18 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
         
+        // Inform active tether (if bond chain) before we destroy or detach salvage
+        if (this.activeTether && typeof this.activeTether.onSalvageDeposited === 'function') {
+            try {
+                const attached = this.activeTether.getAttachedSalvage();
+                if (attached !== salvage) {
+                    this.activeTether.onSalvageDeposited(salvage);
+                }
+            } catch (e) {
+                console.warn('onSalvageDeposited callback failed:', e);
+            }
+        }
+
         console.log(`Direct deposit processing for salvage value ${salvage.value}`);
         
         // Show deposit success effect

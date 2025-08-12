@@ -15,6 +15,7 @@ export interface ITether {
   toggleColorCycling?(): boolean;
   onTetherButtonPressed?(): boolean;
   toggleDebug?(): void;
+  onSalvageDeposited?(salvage: Salvage): void;
 }
 
 export function createTether(
