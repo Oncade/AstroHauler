@@ -213,6 +213,11 @@ export const TetherConfig = {
     curveAmount: 0.1,            // Amount of curve in the tether (0-1)
 };
 
+// Simple runtime selection for tether type; can be driven by meta/progression later
+export const TetherSelection = {
+    selectedType: 'bond' as 'basic' | 'multi' | 'bond'
+};
+
 // Type for color names
 type TetherColorName = keyof typeof TetherConfig.colorOptions;
 

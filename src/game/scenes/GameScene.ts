@@ -2,11 +2,10 @@ import Phaser from 'phaser';
 import Player from '../objects/Player';
 import Salvage from '../objects/Salvage';
 import ParentShip from '../objects/ParentShip';
-import Tether from '../objects/Tether';
+import { ITether, createTether } from '../objects/TetherFactory';
 import { EventBus } from '../EventBus';
 import {
     ControlKeys,
-    SalvageConfig,
     getRandomSalvageMass,
     getRandomSalvageTexture,
     ParentShipConfig,
@@ -19,12 +18,13 @@ import {
     CameraConfig,
     WorldConfig
 } from '../config/GameConfig';
+import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
 
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
     private parentShip!: ParentShip;
     private salvageGroup!: Phaser.Physics.Arcade.Group;
-    private activeTether: Tether | null = null;
+    private activeTether: ITether | null = null;
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private hasPlayerLeftExitZone: boolean = false;
@@ -64,6 +64,9 @@ export default class GameScene extends Phaser.Scene {
         console.log('GameScene create');
         const { width, height } = this.scale;
 
+        // Apply meta-game upgrades/ship modifiers to runtime configs
+        applyMetaToRuntimeConfigs();
+
         // Play random background music
         this.playRandomBackgroundMusic();
 
@@ -88,7 +91,7 @@ export default class GameScene extends Phaser.Scene {
         // The thrust-button image is already loaded in PreloaderScene,
         // so we don't need to create it here
 
-        // Load persisted total SpaceBucks if available
+        // Load persisted total SpaceBucks from meta progress
         this.loadTotalSpaceBucks();
         
         // Reset current haul score on scene start
@@ -136,7 +139,9 @@ export default class GameScene extends Phaser.Scene {
         const safeDistance = 200; // Minimum distance from parent ship
 
         // Spawn initial salvage items (avoiding parent ship)
-        for (let i = 0; i < SalvageConfig.spawnCount; i++) {
+        const haulParams = getHaulParams();
+        const spawnCount = haulParams.salvageSpawnCount;
+        for (let i = 0; i < spawnCount; i++) {
             let x, y, distanceToShip;
             
             // Keep trying positions until we find one far enough from the parent ship
@@ -209,7 +214,7 @@ export default class GameScene extends Phaser.Scene {
         // Setup Collisions
         this.physics.add.collider(this.player, this.salvageGroup); // Player bounces off salvage
         this.physics.add.collider(this.salvageGroup, this.salvageGroup); // Salvage bounces off each other
-        this.physics.add.collider(this.salvageGroup, this.parentShip); // Salvage bounces off parent ship (static)
+        //this.physics.add.collider(this.salvageGroup, this.parentShip); // Salvage bounces off parent ship (static)
         // Note: Player does *not* collide with Parent Ship by default, can add if needed
         // this.physics.add.collider(this.player, this.parentShip);
         
@@ -448,6 +453,14 @@ export default class GameScene extends Phaser.Scene {
             // Don't stop propagation as it might be interfering with touch events
             
             if (this.activeTether) {
+                // Allow active tether implementation to handle the press first (bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                        return;
+                    }
+                }
                 // If already tethered, release the tether
                 this.activeTether.destroy();
                 this.activeTether = null;
@@ -791,11 +804,18 @@ export default class GameScene extends Phaser.Scene {
         // --- Handle Tether Key Press ---
         if (Phaser.Input.Keyboard.JustDown(this.keys.tether)) {
             if (this.activeTether) {
-                // If already tethered, release the tether
+                // Allow active tether to handle press first (e.g., bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        if (this.tetherButton) this.tetherButton.setTint(TouchControlsConfig.colors.active);
+                        return;
+                    }
+                }
+                // If not handled, default to release
                 this.activeTether.destroy();
                 this.activeTether = null;
                 console.log('Scene: Tether released by key press.');
-                // Update tether button visual if it exists
                 if (this.tetherButton) {
                     this.tetherButton.setTint(TouchControlsConfig.colors.normal);
                 }
@@ -895,7 +915,7 @@ export default class GameScene extends Phaser.Scene {
         if (distanceSq <= maxDistanceSq) {
             // No need to reset acceleration - this allows both objects to maintain their current momentum
             // Create the tether without modifying current physics state
-            this.activeTether = new Tether(this, this.player, closestSalvage);
+            this.activeTether = createTether(this, this.player, closestSalvage);
             console.log('Scene: Tether initiated by key press to nearest salvage.');
         } else {
             console.log('Scene: Nearest eligible salvage is out of range.');
@@ -1044,8 +1064,10 @@ export default class GameScene extends Phaser.Scene {
         this.score += salvage.value;
         
         // Check if scene is still active before updating UI
-        if (this.scene.isActive() && this.scoreText && this.scoreText.active) {
-            this.scoreText.setText('Score: ' + this.score);
+        if (this.scene.isActive()) {
+            if (this.scoreText && this.scoreText.active) {
+                this.scoreText.setText('Score: ' + this.score);
+            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1126,8 +1148,10 @@ export default class GameScene extends Phaser.Scene {
         this.score += salvage.value;
         
         // Safely update UI only if scene is still active
-        if (this.scene.isActive() && this.scoreText && this.scoreText.active) {
-            this.scoreText.setText('Score: ' + this.score);
+        if (this.scene.isActive()) {
+            if (this.scoreText && this.scoreText.active) {
+                this.scoreText.setText('Score: ' + this.score);
+            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1150,14 +1174,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Helper method to load total SpaceBucks from localStorage
     loadTotalSpaceBucks() {
-        const savedBucks = localStorage.getItem('totalSpaceBucks');
-        if (savedBucks) {
-            this.totalSpaceBucks = parseInt(savedBucks, 10);
-            console.log(`Loaded total SpaceBucks: ${this.totalSpaceBucks}`);
-        } else {
-            this.totalSpaceBucks = 0;
-            console.log('No saved SpaceBucks found, starting fresh');
-        }
+        const progress = loadMetaProgress();
+        this.totalSpaceBucks = progress.totalSpaceBucks || 0;
+        console.log(`Loaded total SpaceBucks: ${this.totalSpaceBucks}`);
     }
     
     // Helper method to save total SpaceBucks to localStorage
@@ -1168,13 +1187,11 @@ export default class GameScene extends Phaser.Scene {
     
     // End the current haul and save progress
     endHaul() {
-        console.log('Ending haul. Adding score to total SpaceBucks.');
-        // Add current score to total
-        this.totalSpaceBucks += this.score;
-        
-        // Save to localStorage
-        this.saveTotalSpaceBucks();
-        
+        console.log('Ending haul. Adding score to total SpaceBucks (meta).');
+        // Persist SpaceBucks via meta system
+        addSpaceBucks(this.score);
+        const updatedTotal = loadMetaProgress().totalSpaceBucks;
+
         // Clean up tether before changing scene
         if (this.activeTether) {
             this.activeTether.destroy();
@@ -1184,7 +1201,7 @@ export default class GameScene extends Phaser.Scene {
         // Pass both current score and total to GameOverScene
         this.scene.start('GameOverScene', { 
             score: this.score,
-            totalSpaceBucks: this.totalSpaceBucks
+            totalSpaceBucks: updatedTotal
         });
         
         // Explicitly stop this scene to ensure shutdown is called
