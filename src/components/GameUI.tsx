@@ -166,13 +166,13 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
                     <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
                         <li>{isMobile ? 'Hold the thrust button to move' : 'W/Up - Thrust forward'}</li>
                         <li>{isMobile ? 'Use the joystick to rotate' : 'A/D or Left/Right - Rotate ship'}</li>
-                        <li>{isMobile ? 'Tap the tether button to tether/release' : 'T - Tether/Release salvage'}</li>
+                        <li>{isMobile ? 'Tap the tether button to tether/release' : 'Space - Tether/Release salvage'}</li>
                     </ul>
                     
                     <h4 style={{ color: '#ffff00', marginBottom: '5px', fontSize: isMobile ? '14px' : '16px' }}>How to Collect SpaceBucks:</h4>
                     <ol style={{ marginTop: '5px', paddingLeft: '20px' }}>
                         <li>Salvage is automatically collected when it enters the <span style={{ color: '#00ff00' }}>GREEN DEPOSIT ZONE</span></li>
-                        <li>You can {isMobile ? 'use the tether button' : 'press T'} to tether salvage and drag it to the deposit zone</li>
+                        <li>You can {isMobile ? 'use the tether button' : 'press Space'} to tether salvage and drag it to the deposit zone</li>
                         <li><b>Move salvage directly into the center</b> of the deposit zone</li>
                         <li>Watch for the <span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span> message</li>
                     </ol>
@@ -211,7 +211,7 @@ export const GameUI: React.FC<GameUIProps> = ({ score, totalSpaceBucks }) => {
                     <h3 style={{ margin: '0 0 10px 0', color: '#ffff00', fontSize: isMobile ? '16px' : '18px' }}>HOW TO COLLECT SPACEBUCKS:</h3>
                     <ol style={{ margin: '0', paddingLeft: '20px' }}>
                         <li>Any space junk will be collected when it enters the deposit zone</li>
-                        <li>{isMobile ? 'Use the tether button' : 'Press T'} to tether space junk and drag it to the GREEN DEPOSIT ZONE</li>
+                        <li>{isMobile ? 'Use the tether button' : 'Press Space'} to tether space junk and drag it to the GREEN DEPOSIT ZONE</li>
                         <li><b>Move salvage FULLY INTO</b> the deposit zone</li>
                         <li>Watch for "<span style={{ color: '#00ffff' }}>DEPOSIT SUCCESS!</span>"</li>
                     </ol>

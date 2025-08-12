@@ -93,7 +93,7 @@ export const ControlKeys = {
     thrust: Phaser.Input.Keyboard.KeyCodes.W,
     rotateLeft: Phaser.Input.Keyboard.KeyCodes.A,
     rotateRight: Phaser.Input.Keyboard.KeyCodes.D,
-    tether: Phaser.Input.Keyboard.KeyCodes.T, // Added tether key
+    tether: Phaser.Input.Keyboard.KeyCodes.SPACE, // Tether key (Spacebar)
     // Add strafe keys if needed later
     // strafeLeft: 'Q',
     // strafeRight: 'E',
