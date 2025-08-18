@@ -52,6 +52,12 @@ export default class GameScene extends Phaser.Scene {
     private joystickVisible: boolean = false;
     private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
+    // Static colliders generated from debris alpha map
+    private debrisStaticGroup?: Phaser.Physics.Arcade.StaticGroup;
+    private debrisTileSize: number = 32;
+    private showDebrisCollisionDebug: boolean = false;
+    private debrisDebugGraphics?: Phaser.GameObjects.Graphics;
+
     private isMobileDevice: boolean = false;
     private deviceMultiplier: number = 1.0;
     private screenOrientation: 'portrait' | 'landscape' = 'landscape';
@@ -97,16 +103,29 @@ export default class GameScene extends Phaser.Scene {
         // Reset current haul score on scene start
         this.score = 0;
 
-        // Set world bounds (adjust size based on device type)
+        // Load debris map texture details (will set world size to image size if available)
+        const debrisTexture = this.textures.get('debris_map');
+        const debrisSource = debrisTexture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+        const debrisWidth = debrisSource ? (debrisSource as any).width : undefined;
+        const debrisHeight = debrisSource ? (debrisSource as any).height : undefined;
+
+        // Set world bounds; prefer debris map size when present
         const worldSizeMultiplier = this.isMobileDevice ? WorldConfig.sizeMultiplier.mobile : WorldConfig.sizeMultiplier.desktop;
-        const worldWidth = width * worldSizeMultiplier;
-        const worldHeight = height * worldSizeMultiplier;
+        const worldWidth = debrisWidth ?? width * worldSizeMultiplier;
+        const worldHeight = debrisHeight ?? height * worldSizeMultiplier;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
-        // Add Background FIRST
+        // Add Background FIRST (fixed starfield for parallax feel)
         this.add.tileSprite(0, 0, worldWidth, worldHeight, BackgroundConfig.textureKey)
             .setOrigin(0, 0)
-            .setScrollFactor(0); // Keep fixed relative to camera
+            .setScrollFactor(0);
+
+        // Add debris map image as the visible level layer at world origin and build collision from its alpha
+        if (debrisTexture && debrisWidth && debrisHeight) {
+            this.add.image(0, 0, 'debris_map').setOrigin(0, 0).setScrollFactor(1);
+            this.debrisTileSize = 32;
+            this.buildDebrisCollisionFromAlpha(this.debrisTileSize, 100); // tile size, alpha threshold
+        }
 
         // Create Parent Ship first
         this.parentShip = new ParentShip(this, ParentShipConfig.spawnX, ParentShipConfig.spawnY);
@@ -218,6 +237,22 @@ export default class GameScene extends Phaser.Scene {
         // Note: Player does *not* collide with Parent Ship by default, can add if needed
         // this.physics.add.collider(this.player, this.parentShip);
         
+        // Collide against debris static obstacles if present
+        if (this.debrisStaticGroup) {
+            this.physics.add.collider(this.player, this.debrisStaticGroup);
+            this.physics.add.collider(this.salvageGroup, this.debrisStaticGroup);
+        }
+
+        // Toggle collision debug with F1
+        this.input.keyboard?.on('keydown-F1', () => {
+            this.showDebrisCollisionDebug = !this.showDebrisCollisionDebug;
+            if (this.showDebrisCollisionDebug) {
+                this.drawDebrisCollisionDebug();
+            } else {
+                this.clearDebrisCollisionDebug();
+            }
+        });
+
         // Overlap for Salvage Deposit - now using the deposit zone physics body
         this.physics.add.overlap(
             this.depositZone,
@@ -642,6 +677,90 @@ export default class GameScene extends Phaser.Scene {
         }
         
         return { x: worldX, y: worldY };
+    }
+
+    // Build a tilemap collision layer from the alpha channel of the debris map image
+    // tileSize: pixels per tile; alphaThreshold: 0..255 below which is empty
+    private buildDebrisCollisionFromAlpha(tileSize: number, alphaThreshold: number) {
+        const texture = this.textures.get('debris_map');
+        const src = texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+        if (!src) return;
+
+        // Draw into an offscreen canvas to read pixels
+        const canvas = document.createElement('canvas');
+        const width = (src as any).width;
+        const height = (src as any).height;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(src as CanvasImageSource, 0, 0);
+        const imageData = ctx.getImageData(0, 0, width, height).data;
+
+        const cols = Math.ceil(width / tileSize);
+        const rows = Math.ceil(height / tileSize);
+        const data: number[][] = [];
+
+        // Simple sampling: if any pixel in the tile has alpha >= threshold, mark as colliding (1)
+        for (let ty = 0; ty < rows; ty++) {
+            const row: number[] = [];
+            for (let tx = 0; tx < cols; tx++) {
+                let solid = false;
+                const startX = tx * tileSize;
+                const startY = ty * tileSize;
+                const endX = Math.min(startX + tileSize, width);
+                const endY = Math.min(startY + tileSize, height);
+                for (let y = startY; !solid && y < endY; y += Math.max(1, Math.floor(tileSize / 4))) {
+                    for (let x = startX; x < endX; x += Math.max(1, Math.floor(tileSize / 4))) {
+                        const idx = (y * width + x) * 4 + 3; // alpha channel
+                        if (imageData[idx] >= alphaThreshold) { solid = true; break; }
+                    }
+                }
+                // Use 1 for solid tile index and -1 for empty space
+                row.push(solid ? 1 : -1);
+            }
+            data.push(row);
+        }
+
+        // Build static physics rectangles instead of a tilemap for reliability
+        this.debrisStaticGroup = this.physics.add.staticGroup();
+        for (let ty = 0; ty < rows; ty++) {
+            const row = data[ty];
+            if (!row) continue;
+            for (let tx = 0; tx < cols; tx++) {
+                if (row[tx] === 1) {
+                    const x = tx * tileSize + tileSize / 2;
+                    const y = ty * tileSize + tileSize / 2;
+                    const block = this.add.rectangle(x, y, tileSize, tileSize, 0x000000, 0);
+                    this.physics.add.existing(block, true); // true => static body
+                    this.debrisStaticGroup.add(block);
+                }
+            }
+        }
+
+        if (this.showDebrisCollisionDebug) {
+            this.drawDebrisCollisionDebug();
+        }
+    }
+
+    private drawDebrisCollisionDebug() {
+        if (!this.debrisStaticGroup) return;
+        if (!this.debrisDebugGraphics) {
+            this.debrisDebugGraphics = this.add.graphics();
+            this.debrisDebugGraphics.setScrollFactor(1);
+        }
+        this.debrisDebugGraphics.clear();
+        this.debrisDebugGraphics.lineStyle(1, 0x00ff00, 0.5);
+        this.debrisStaticGroup.getChildren().forEach((obj: Phaser.GameObjects.GameObject) => {
+            const rect = obj.getBounds();
+            this.debrisDebugGraphics?.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        });
+    }
+
+    private clearDebrisCollisionDebug() {
+        if (this.debrisDebugGraphics) {
+            this.debrisDebugGraphics.clear();
+        }
     }
     
     // Fade out joystick smoothly

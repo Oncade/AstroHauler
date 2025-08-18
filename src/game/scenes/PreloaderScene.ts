@@ -80,6 +80,8 @@ export default class PreloaderScene extends Phaser.Scene {
         this.load.image('ship', 'assets/images/ship.png');
         this.load.image('parent_ship', 'assets/images/parent_ship.png');
         this.load.image(BackgroundConfig.textureKey, BackgroundConfig.imagePath); // Starfield
+        // Level collision map image
+        this.load.image('debris_map', 'assets/images/ship_debris_map.png');
 
         // Load all salvage variants
         for (let i = 1; i <= 7; i++) {
