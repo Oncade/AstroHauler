@@ -51,18 +51,10 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#000010', // Darker space background
     transparent: true,
     scale: {
-        mode: Phaser.Scale.FIT, // Change to FIT for better cross-device scaling
-        autoCenter: Phaser.Scale.CENTER_BOTH, // Center the game canvas
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1920,
-        height: 1080,
-        min: {
-            width: 320,
-            height: 480
-        },
-        max: {
-            width: 1920,
-            height: 1080
-        }
+        height: 1080
     },
     physics: {
         default: 'arcade',
@@ -265,7 +257,7 @@ export const SalvageConfig = {
 // Parent Ship Config
 export const ParentShipConfig = {
     texture: 'parent_ship', // Use the actual asset key
-    spawnX: typeof GameConfig.width === 'number' ? GameConfig.width * 0.5 : 1024 * 0.3, // Position near left edge
+    spawnX: typeof GameConfig.width === 'number' ? GameConfig.width * 0.25 : 1024 * 0.01, // Position near left edge
     spawnY: typeof GameConfig.height === 'number' ? GameConfig.height * 0.5 : 768 * 0.5, // Position vertically centered
     depositZoneRadius: 100, // Visual radius for deposit zone indicator
     depositZoneOffset: { x: 500, y: 200 } // Offset from parent ship center (positive x = right)

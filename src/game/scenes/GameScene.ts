@@ -19,6 +19,7 @@ import {
     WorldConfig
 } from '../config/GameConfig';
 import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
+import Minimap from '../objects/Minimap';
 
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
@@ -52,6 +53,14 @@ export default class GameScene extends Phaser.Scene {
     private joystickVisible: boolean = false;
     private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
+    // Minimap
+    private minimap?: Minimap;
+    private minimapButtonContainer?: Phaser.GameObjects.Container;
+    private minimapButtonIcon?: Phaser.GameObjects.Graphics;
+    private worldWidth: number = 0;
+    private worldHeight: number = 0;
+    private isPausedForMinimap: boolean = false;
+
     // Static colliders generated from debris alpha map
     private debrisStaticGroup?: Phaser.Physics.Arcade.StaticGroup;
     private debrisTileSize: number = 32;
@@ -82,6 +91,8 @@ export default class GameScene extends Phaser.Scene {
             if (this.music && this.music.isPlaying) {
                 this.music.stop();
             }
+            // Clean up minimap resources
+            this.minimap?.destroy();
         });
 
         // Detect device type and set screen properties
@@ -113,12 +124,18 @@ export default class GameScene extends Phaser.Scene {
         const worldSizeMultiplier = this.isMobileDevice ? WorldConfig.sizeMultiplier.mobile : WorldConfig.sizeMultiplier.desktop;
         const worldWidth = debrisWidth ?? width * worldSizeMultiplier;
         const worldHeight = debrisHeight ?? height * worldSizeMultiplier;
+        this.worldWidth = worldWidth;
+        this.worldHeight = worldHeight;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
-        // Add Background FIRST (fixed starfield for parallax feel)
-        this.add.tileSprite(0, 0, worldWidth, worldHeight, BackgroundConfig.textureKey)
+        // Add Background FIRST (fixed starfield for parallax feel) and make it track viewport size
+        const starfield = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, BackgroundConfig.textureKey)
             .setOrigin(0, 0)
             .setScrollFactor(0);
+        // Update starfield size on resize to cover entire viewport
+        this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+            starfield.setSize(gameSize.width, gameSize.height);
+        });
 
         // Add debris map image as the visible level layer at world origin and build collision from its alpha
         if (debrisTexture && debrisWidth && debrisHeight) {
@@ -339,7 +356,23 @@ export default class GameScene extends Phaser.Scene {
         };
         
         // Use event to check for deposits but with safety guards
-        this.events.on('update', checkForDeposits);
+        this.events.on('update', () => {
+            if (!this.isPausedForMinimap) {
+                checkForDeposits();
+            }
+        });
+
+        // Create minimap overlay (after world and objects are ready)
+        this.minimap = new Minimap(this, {
+            worldWidth: this.worldWidth,
+            worldHeight: this.worldHeight,
+            hasDebrisMap: Boolean(debrisTexture && debrisWidth && debrisHeight),
+            isMobileDevice: this.isMobileDevice
+        });
+        this.minimap.start(this.player, this.parentShip, this.salvageGroup);
+
+        // Create minimap toggle button (starts hidden state)
+        this.createMinimapButton();
     }
 
     // Handler for screen resize/orientation change
@@ -379,6 +412,81 @@ export default class GameScene extends Phaser.Scene {
             this.createTouchControls();
             console.log('Touch controls recreated for new screen size');
         }
+
+        // Resize/rebuild minimap for new screen size
+        this.minimap?.handleResize(this.isMobileDevice);
+
+        // Reposition minimap button
+        this.positionMinimapButton();
+    }
+
+    // --- Minimap --- (now handled by Minimap class)
+    private createMinimapButton() {
+        const { width, height } = this.scale;
+        const size = this.isMobileDevice ? 64 : 56;
+        const margin = 14;
+        const posX = width - size - margin;
+        const posY = height - size - margin;
+
+        this.minimapButtonContainer = this.add.container(posX, posY)
+            .setScrollFactor(0)
+            .setDepth(1200)
+            .setSize(size, size)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
+
+        // Button background
+        const bg = this.add.graphics();
+        bg.fillStyle(0x0b0b12, 0.85);
+        bg.fillRoundedRect(0, 0, size, size, 12);
+        bg.lineStyle(2, 0x00ffcc, 0.7);
+        bg.strokeRoundedRect(0, 0, size, size, 12);
+        this.minimapButtonContainer.add(bg);
+
+        // Icon: stylized radar/map glyph
+        this.minimapButtonIcon = this.add.graphics();
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = size * 0.32;
+        this.minimapButtonIcon.lineStyle(3, 0x00ff88, 1);
+        this.minimapButtonIcon.strokeCircle(cx, cy, r);
+        this.minimapButtonIcon.lineStyle(2, 0x00ffaa, 0.9);
+        this.minimapButtonIcon.beginPath();
+        this.minimapButtonIcon.moveTo(cx, cy);
+        this.minimapButtonIcon.lineTo(cx + r, cy - r * 0.2);
+        this.minimapButtonIcon.strokePath();
+        // grid hint
+        this.minimapButtonIcon.lineStyle(1, 0x00ffcc, 0.6);
+        this.minimapButtonIcon.strokeRect(cx - r * 0.8, cy - r * 0.8, r * 1.6, r * 1.6);
+        this.minimapButtonContainer.add(this.minimapButtonIcon);
+
+        // Hover/press feedback
+        this.minimapButtonContainer.on('pointerover', () => bg.setAlpha(1));
+        this.minimapButtonContainer.on('pointerout', () => bg.setAlpha(0.85));
+        this.minimapButtonContainer.on('pointerdown', () => {
+            this.tweens.add({ targets: this.minimapButtonContainer, scale: 0.95, duration: 80, yoyo: true });
+            const visible = this.minimap?.toggle();
+            if (visible !== undefined) {
+                this.setPausedForMinimap(visible);
+            }
+        });
+    }
+
+    private positionMinimapButton() {
+        if (!this.minimapButtonContainer) return;
+        const { width, height } = this.scale;
+        const size = this.isMobileDevice ? 64 : 56;
+        const margin = 14;
+        const posX = width - size - margin;
+        const posY = height - size - margin;
+        this.minimapButtonContainer.setPosition(posX, posY);
+    }
+
+    private setPausedForMinimap(paused: boolean) {
+        this.isPausedForMinimap = paused;
+        // Pause/resume physics and time-based systems
+        this.physics.world.isPaused = paused;
+        this.tweens.timeScale = paused ? 0 : 1;
+        // Optionally dim player thruster sound etc. (not implemented)
     }
 
     createTouchControls() {
@@ -751,8 +859,8 @@ export default class GameScene extends Phaser.Scene {
         }
         this.debrisDebugGraphics.clear();
         this.debrisDebugGraphics.lineStyle(1, 0x00ff00, 0.5);
-        this.debrisStaticGroup.getChildren().forEach((obj: Phaser.GameObjects.GameObject) => {
-            const rect = obj.getBounds();
+        this.debrisStaticGroup.getChildren().forEach((obj) => {
+            const rect = (obj as Phaser.GameObjects.Rectangle).getBounds();
             this.debrisDebugGraphics?.strokeRect(rect.x, rect.y, rect.width, rect.height);
         });
     }
@@ -880,6 +988,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
+        // Pause gameplay simulation while minimap overlay is visible
+        if (this.isPausedForMinimap) {
+            return;
+        }
         // --- Handle Input ---
         // Handle rotation
         if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
