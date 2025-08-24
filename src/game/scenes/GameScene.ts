@@ -20,6 +20,7 @@ import {
 } from '../config/GameConfig';
 import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
 import Minimap from '../objects/Minimap';
+import FogOfWar from '../objects/FogOfWar';
 
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
@@ -61,6 +62,9 @@ export default class GameScene extends Phaser.Scene {
     private worldHeight: number = 0;
     private isPausedForMinimap: boolean = false;
 
+    // Fog of War
+    private fogOfWar?: FogOfWar;
+
     // Static colliders generated from debris alpha map
     private debrisStaticGroup?: Phaser.Physics.Arcade.StaticGroup;
     private debrisTileSize: number = 32;
@@ -93,6 +97,8 @@ export default class GameScene extends Phaser.Scene {
             }
             // Clean up minimap resources
             this.minimap?.destroy();
+            // Clean up fog resources
+            this.fogOfWar?.destroy();
         });
 
         // Detect device type and set screen properties
@@ -298,7 +304,8 @@ export default class GameScene extends Phaser.Scene {
         })
         .setOrigin(1, 0)
         .setInteractive()
-        .setScrollFactor(0); // Keep UI fixed
+        .setScrollFactor(0) // Keep UI fixed
+        .setDepth(1200); // Ensure above fog/minimap
 
         exitButton.on('pointerdown', () => {
             this.endHaul();
@@ -361,6 +368,9 @@ export default class GameScene extends Phaser.Scene {
                 checkForDeposits();
             }
         });
+
+        // Initialize Fog of War overlay (after world and objects are ready, before UI)
+        this.fogOfWar = new FogOfWar(this, this.worldWidth, this.worldHeight);
 
         // Create minimap overlay (after world and objects are ready)
         this.minimap = new Minimap(this, {
@@ -425,8 +435,9 @@ export default class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
         const size = this.isMobileDevice ? 64 : 56;
         const margin = 14;
+        const installReserve = this.isMobileDevice ? 80 : 60;
         const posX = width - size - margin;
-        const posY = height - size - margin;
+        const posY = height - size - margin - installReserve;
 
         this.minimapButtonContainer = this.add.container(posX, posY)
             .setScrollFactor(0)
@@ -476,8 +487,9 @@ export default class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
         const size = this.isMobileDevice ? 64 : 56;
         const margin = 14;
+        const installReserve = this.isMobileDevice ? 80 : 60;
         const posX = width - size - margin;
-        const posY = height - size - margin;
+        const posY = height - size - margin - installReserve;
         this.minimapButtonContainer.setPosition(posX, posY);
     }
 
@@ -1069,6 +1081,14 @@ export default class GameScene extends Phaser.Scene {
         
         // Check for player in exit zone
         this.checkPlayerExitZoneOverlap();
+
+        // Update Fog of War with player's current vision
+        if (this.fogOfWar && this.player && this.parentShip) {
+            this.fogOfWar.update(
+                { x: this.player.x, y: this.player.y, rotation: this.player.rotation },
+                { x: this.parentShip.x, y: this.parentShip.y }
+            );
+        }
     }
     
     // Helper method to smoothly rotate the ship towards a target angle

@@ -24,7 +24,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.rangeIndicator = scene.add.graphics();
         
         // Enhanced visibility for the range indicator (pulse effect)
-        this.createEnhancedRangeIndicator();
+       // this.createEnhancedRangeIndicator();
         
         // Start the pulsing animation for better visibility on touch screens
         this.startPulseAnimation();

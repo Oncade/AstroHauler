@@ -284,6 +284,32 @@ export const WorldConfig = {
     }
 };
 
+// Vision / Fog-of-War Config (tunable and upgradable via meta)
+export const VisionConfig = {
+    // Base circular vision around player (pixels in world units)
+    baseRadius: 150,
+    // Additional forward cone length (beyond radius)
+    coneLength: 300,
+    // Cone angle in degrees (centered on ship forward vector)
+    coneAngleDeg: 55,
+    // Parent ship passive vision radius
+    parentRadius: 850,
+    // Soft edge feathering in pixels for nicer blend
+    feather: 24,
+    // How often to stamp explored into shroud (ms); 0 = every frame
+    stampIntervalMs: 20,
+    // Alpha levels
+    fogAlpha: 1,      // Darkness of unseen
+    exploredAlpha: 0.35, // Dimness of explored-but-not-currently-visible
+    // LOS sampling (debris alpha map based)
+    occlusionAlphaThreshold: 100, // Match debris collision threshold
+    rayStepDeg: 2,        // Angular sampling step for vision fans
+    rayStepPx: 6,         // March step in pixels along each ray
+    // When an occluder is hit, reveal some interior depth along the ray
+    occluderFillDepthPx: 160,
+    occluderFillStepPx: 8
+};
+
 // --- Helper Functions ---
 // Function to generate a random mass for salvage
 export function getRandomSalvageMass(): number {
