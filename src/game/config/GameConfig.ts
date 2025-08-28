@@ -51,10 +51,11 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#000010', // Darker space background
     transparent: true,
     scale: {
-        mode: Phaser.Scale.RESIZE,
+        mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1920,
-        height: 1080
+        height: 1080,
+        parent: 'game-container'
     },
     physics: {
         default: 'arcade',

@@ -73,18 +73,8 @@ function App() {
     return (
         <div id="app">
             <PhaserGame ref={phaserRef} currentActiveScene={currentSceneActive} />
-            <div>
-                {renderUI()}
-                <InstallButton />
-                {/* Original template example text - can be removed */}
-                {/* <div>
-                    <p>Sprite Position:</p>
-                    <pre>{`{
-  x: ${spritePosition.x}
-  y: ${spritePosition.y}
-}`}</pre>
-                </div> */}
-            </div>
+            {renderUI()}
+            <InstallButton />
         </div>
     )
 }

@@ -61,6 +61,11 @@ export default class GameScene extends Phaser.Scene {
     private worldWidth: number = 0;
     private worldHeight: number = 0;
     private isPausedForMinimap: boolean = false;
+    
+    // UI Buttons
+    private exitButtonContainer?: Phaser.GameObjects.Container;
+    private helpButtonContainer?: Phaser.GameObjects.Container;
+    private showInstructions: boolean = false;
 
     // Fog of War
     private fogOfWar?: FogOfWar;
@@ -296,22 +301,7 @@ export default class GameScene extends Phaser.Scene {
         // Update Phaser score text after reset
         this.scoreText.setText('Score: ' + this.score);
 */
-        const exitButton = this.add.text(width - 200, 100, '[ Exit ]', {
-            fontSize: '24px',
-            color: '#ff0000',
-            backgroundColor: '#555555',
-            padding: { left: 10, right: 10, top: 5, bottom: 5 }
-        })
-        .setOrigin(1, 0)
-        .setInteractive()
-        .setScrollFactor(0) // Keep UI fixed
-        .setDepth(1200); // Ensure above fog/minimap
-
-        exitButton.on('pointerdown', () => {
-            this.endHaul();
-        });
-        exitButton.on('pointerover', () => exitButton.setStyle({ backgroundColor: '#ff0000', color: '#000' }));
-        exitButton.on('pointerout', () => exitButton.setStyle({ backgroundColor: '#555555', color: '#ff0000' }));
+        // UI buttons will be created after minimap setup
 
         // Camera setup with device-specific settings
         const cameraZoom = this.isMobileDevice ? 
@@ -383,6 +373,11 @@ export default class GameScene extends Phaser.Scene {
 
         // Create minimap toggle button (starts hidden state)
         this.createMinimapButton();
+        
+        // Create UI buttons (Exit, Help) positioned in upper right corner
+        this.createUIButtons();
+        
+        // Touch debugging completed - coordinates work correctly
     }
 
     // Handler for screen resize/orientation change
@@ -426,18 +421,18 @@ export default class GameScene extends Phaser.Scene {
         // Resize/rebuild minimap for new screen size
         this.minimap?.handleResize(this.isMobileDevice);
 
-        // Reposition minimap button
+        // Reposition UI buttons
+        this.positionUIButtons();
         this.positionMinimapButton();
     }
 
     // --- Minimap --- (now handled by Minimap class)
     private createMinimapButton() {
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         const size = this.isMobileDevice ? 64 : 56;
         const margin = 14;
-        const installReserve = this.isMobileDevice ? 80 : 60;
         const posX = width - size - margin;
-        const posY = height - size - margin - installReserve;
+        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
 
         this.minimapButtonContainer = this.add.container(posX, posY)
             .setScrollFactor(0)
@@ -484,12 +479,11 @@ export default class GameScene extends Phaser.Scene {
 
     private positionMinimapButton() {
         if (!this.minimapButtonContainer) return;
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         const size = this.isMobileDevice ? 64 : 56;
         const margin = 14;
-        const installReserve = this.isMobileDevice ? 80 : 60;
         const posX = width - size - margin;
-        const posY = height - size - margin - installReserve;
+        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
         this.minimapButtonContainer.setPosition(posX, posY);
     }
 
@@ -500,6 +494,192 @@ export default class GameScene extends Phaser.Scene {
         this.tweens.timeScale = paused ? 0 : 1;
         // Optionally dim player thruster sound etc. (not implemented)
     }
+
+    // Create UI buttons (Exit, Help) in upper right corner
+    private createUIButtons() {
+        const { width } = this.scale;
+        const size = this.isMobileDevice ? 64 : 56;
+        const margin = 14;
+        
+        // Exit button - top right
+        const exitPosX = width - size - margin;
+        const exitPosY = margin;
+        
+        this.exitButtonContainer = this.add.container(exitPosX, exitPosY)
+            .setScrollFactor(0)
+            .setDepth(1200)
+            .setSize(size, size)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
+
+        // Exit button background
+        const exitBg = this.add.graphics();
+        exitBg.fillStyle(0x330000, 0.85);
+        exitBg.fillRoundedRect(0, 0, size, size, 12);
+        exitBg.lineStyle(2, 0xff3300, 0.8);
+        exitBg.strokeRoundedRect(0, 0, size, size, 12);
+        this.exitButtonContainer.add(exitBg);
+
+        // Exit button text
+        const exitText = this.add.text(size / 2, size / 2, 'EXIT', {
+            fontSize: this.isMobileDevice ? '12px' : '14px',
+            color: '#ff3300',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.exitButtonContainer.add(exitText);
+
+        // Help button - below exit button
+        const helpPosX = width - size - margin;
+        const helpPosY = margin + size + 10;
+        
+        this.helpButtonContainer = this.add.container(helpPosX, helpPosY)
+            .setScrollFactor(0)
+            .setDepth(1200)
+            .setSize(size, size)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
+
+        // Help button background
+        const helpBg = this.add.graphics();
+        helpBg.fillStyle(0x003300, 0.85);
+        helpBg.fillRoundedRect(0, 0, size, size, 12);
+        helpBg.lineStyle(2, 0x00ff00, 0.7);
+        helpBg.strokeRoundedRect(0, 0, size, size, 12);
+        this.helpButtonContainer.add(helpBg);
+
+        // Help button text
+        const helpText = this.add.text(size / 2, size / 2, 'HELP', {
+            fontSize: this.isMobileDevice ? '12px' : '14px',
+            color: '#00ff00',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.helpButtonContainer.add(helpText);
+
+        // Exit button events
+        this.exitButtonContainer.on('pointerover', () => exitBg.setAlpha(1));
+        this.exitButtonContainer.on('pointerout', () => exitBg.setAlpha(0.85));
+        this.exitButtonContainer.on('pointerdown', () => {
+            this.tweens.add({ targets: this.exitButtonContainer, scale: 0.95, duration: 80, yoyo: true });
+            this.endHaul();
+        });
+
+        // Help button events
+        this.helpButtonContainer.on('pointerover', () => helpBg.setAlpha(1));
+        this.helpButtonContainer.on('pointerout', () => helpBg.setAlpha(0.85));
+        this.helpButtonContainer.on('pointerdown', () => {
+            this.tweens.add({ targets: this.helpButtonContainer, scale: 0.95, duration: 80, yoyo: true });
+            this.toggleInstructions();
+        });
+    }
+
+    // Position UI buttons for screen resize
+    private positionUIButtons() {
+        const { width } = this.scale;
+        const size = this.isMobileDevice ? 64 : 56;
+        const margin = 14;
+        
+        if (this.exitButtonContainer) {
+            const exitPosX = width - size - margin;
+            const exitPosY = margin;
+            this.exitButtonContainer.setPosition(exitPosX, exitPosY);
+        }
+        
+        if (this.helpButtonContainer) {
+            const helpPosX = width - size - margin;
+            const helpPosY = margin + size + 10;
+            this.helpButtonContainer.setPosition(helpPosX, helpPosY);
+        }
+    }
+
+    // Toggle instructions display
+    private toggleInstructions() {
+        this.showInstructions = !this.showInstructions;
+        
+        if (this.showInstructions) {
+            this.showInstructionsPanel();
+        } else {
+            this.hideInstructionsPanel();
+        }
+    }
+
+    // Show instructions panel
+    private showInstructionsPanel() {
+        // Remove existing panel if it exists
+        this.hideInstructionsPanel();
+        
+        const { width, height } = this.scale;
+        const panelWidth = this.isMobileDevice ? Math.min(width * 0.9, 400) : 400;
+        const panelHeight = this.isMobileDevice ? Math.min(height * 0.7, 500) : 500;
+        const panelX = width - panelWidth - 20;
+        const panelY = 80;
+        
+        // Create instructions panel container
+        const instructionsContainer = this.add.container(panelX, panelY)
+            .setScrollFactor(0)
+            .setDepth(1300)
+            .setName('instructionsPanel');
+        
+        // Panel background
+        const panelBg = this.add.graphics();
+        panelBg.fillStyle(0x000000, 0.95);
+        panelBg.fillRoundedRect(0, 0, panelWidth, panelHeight, 12);
+        panelBg.lineStyle(2, 0x00ff00, 0.8);
+        panelBg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 12);
+        instructionsContainer.add(panelBg);
+        
+        // Title
+        const title = this.add.text(panelWidth / 2, 30, 'GAME INSTRUCTIONS', {
+            fontSize: this.isMobileDevice ? '18px' : '20px',
+            color: '#00ff00',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        instructionsContainer.add(title);
+        
+        // Instructions text
+        const controlsText = this.isMobileDevice 
+            ? 'CONTROLS:\n• Hold thrust button to move\n• Use joystick to rotate\n• Tap tether button to grab salvage'
+            : 'CONTROLS:\n• W/Up - Thrust forward\n• A/D or Arrow keys - Rotate\n• Space - Tether/Release salvage';
+            
+        const instructions = this.add.text(20, 70, 
+            `${controlsText}\n\nHOW TO COLLECT SPACEBUCKS:\n• Salvage auto-collects in GREEN ZONE\n• Tether salvage to drag it\n• Move salvage into deposit zone\n• Watch for "DEPOSIT SUCCESS!"\n\nEND HAUL:\n• Fly into RED EXIT ZONE\n• Your SpaceBucks are saved\n• Return to base for upgrades`, {
+            fontSize: this.isMobileDevice ? '12px' : '14px',
+            color: '#ffffff',
+            fontFamily: 'Arial, sans-serif',
+            wordWrap: { width: panelWidth - 40 },
+            lineSpacing: 4
+        });
+        instructionsContainer.add(instructions);
+        
+        // Close button
+        const closeButton = this.add.text(panelWidth / 2, panelHeight - 30, '[ CLOSE ]', {
+            fontSize: this.isMobileDevice ? '14px' : '16px',
+            color: '#ffff00',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold',
+            backgroundColor: '#333333',
+            padding: { left: 10, right: 10, top: 5, bottom: 5 }
+        }).setOrigin(0.5).setInteractive();
+        
+        closeButton.on('pointerdown', () => {
+            this.hideInstructionsPanel();
+            this.showInstructions = false;
+        });
+        closeButton.on('pointerover', () => closeButton.setStyle({ backgroundColor: '#555555' }));
+        closeButton.on('pointerout', () => closeButton.setStyle({ backgroundColor: '#333333' }));
+        
+        instructionsContainer.add(closeButton);
+    }
+
+    // Hide instructions panel
+    private hideInstructionsPanel() {
+        const existingPanel = this.children.getByName('instructionsPanel');
+        if (existingPanel) {
+            existingPanel.destroy();
+        }
+    }
+
+    // Touch coordinate debugging completed - system works correctly
 
     createTouchControls() {
         const { width, height } = this.scale;
@@ -744,23 +924,8 @@ export default class GameScene extends Phaser.Scene {
     
     // Helper method to correct pointer position for camera zoom
     getCorrectedPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
-        // Debug touch positions with visual markers if in mobile/touch device
-        if (this.isMobileDevice || this.isTouchDevice) {
-            // Add a temporary visual marker at the raw pointer position
-            const rawMarker = this.add.circle(pointer.x, pointer.y, 15, 0xff0000, 0.5)
-                .setScrollFactor(0)
-                .setDepth(1000);
-                
-            // Fade out and destroy after 1 second
-            this.tweens.add({
-                targets: rawMarker,
-                alpha: 0,
-                duration: 1000,
-                onComplete: () => rawMarker.destroy()
-            });
-        }
-        
-        // For UI interactions (with setScrollFactor(0)), just return the raw pointer position
+        // Phaser automatically handles canvas scaling for pointer coordinates
+        // The pointer.x and pointer.y are already in the correct game coordinate system
         return { 
             x: pointer.x,
             y: pointer.y
@@ -780,21 +945,6 @@ export default class GameScene extends Phaser.Scene {
         // Convert screen coordinates to world coordinates
         const worldX = pointer.x / zoom + scrollX;
         const worldY = pointer.y / zoom + scrollY;
-        
-        if (this.isMobileDevice || this.isTouchDevice) {
-            // Add a temporary visual marker at the calculated world position
-            const worldMarker = this.add.circle(worldX, worldY, 15, 0x00ff00, 0.5)
-                .setScrollFactor(1) // This will move with the camera
-                .setDepth(1000);
-                
-            // Fade out and destroy after 1 second
-            this.tweens.add({
-                targets: worldMarker,
-                alpha: 0,
-                duration: 1000,
-                onComplete: () => worldMarker.destroy()
-            });
-        }
         
         return { x: worldX, y: worldY };
     }
