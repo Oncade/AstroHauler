@@ -323,6 +323,11 @@ export default class GameScene extends Phaser.Scene {
 
         // Emit the ready event for React bridge
         EventBus.emit('current-scene-ready', this);
+        
+        // Also emit after a short delay to ensure React components are mounted
+        this.time.delayedCall(100, () => {
+            EventBus.emit('current-scene-ready', this);
+        });
 
         // Update all salvage objects to check for deposit zone overlap - safely
         const checkForDeposits = () => {
@@ -372,10 +377,13 @@ export default class GameScene extends Phaser.Scene {
         this.minimap.start(this.player, this.parentShip, this.salvageGroup);
 
         // Create minimap toggle button (starts hidden state)
-        this.createMinimapButton();
+        //this.createMinimapButton();
         
         // Create UI buttons (Exit, Help) positioned in upper right corner
-        this.createUIButtons();
+        //this.createUIButtons();
+        
+        // Setup React UI event listeners
+        this.setupReactUIEventListeners();
         
         // Touch debugging completed - coordinates work correctly
     }
@@ -493,6 +501,7 @@ export default class GameScene extends Phaser.Scene {
         this.physics.world.isPaused = paused;
         this.tweens.timeScale = paused ? 0 : 1;
         // Optionally dim player thruster sound etc. (not implemented)
+        EventBus.emit('game-pause-changed', paused);
     }
 
     // Create UI buttons (Exit, Help) in upper right corner
@@ -569,6 +578,81 @@ export default class GameScene extends Phaser.Scene {
         this.helpButtonContainer.on('pointerdown', () => {
             this.tweens.add({ targets: this.helpButtonContainer, scale: 0.95, duration: 80, yoyo: true });
             this.toggleInstructions();
+        });
+
+
+    }
+
+    // Setup event listeners for React UI components
+    private setupReactUIEventListeners() {
+        EventBus.on('ui-end-haul', () => {
+            this.endHaul();
+        });
+
+        // Minimap toggle from React UI
+        EventBus.on('ui-minimap-toggle', (show: boolean) => {
+            if (!this.minimap) return;
+            if (show) {
+                this.minimap.show();
+            } else {
+                this.minimap.hide();
+            }
+            this.setPausedForMinimap(show);
+            // Inform React of final minimap visibility state
+            EventBus.emit('minimap-state-changed', this.minimap.isVisible());
+        });
+
+        // Tether toggle from React UI
+        EventBus.on('ui-tether-toggle', () => {
+            if (this.activeTether) {
+                console.log('Tether toggle: activeTether exists');
+                // Allow active tether to handle press first (e.g., bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        console.log('Tether toggle: activeTether handled');
+                        EventBus.emit('tether-state-changed', true);
+                        return;
+                    }
+                }
+                console.log('Tether toggle: activeTether not handled');
+                // If not handled, default to release
+                this.activeTether.destroy();
+                this.activeTether = null;
+                EventBus.emit('tether-state-changed', false);
+            } else {
+                console.log('Tether toggle: no activeTether');
+                // If not tethered, try to attach to nearest salvage
+                this.attemptTetherAttach();
+                EventBus.emit('tether-state-changed', !!this.activeTether);
+            }
+        });
+
+        // Thrust control from React UI
+        EventBus.on('ui-thrust-control', (payload: { active: boolean; force?: number }) => {
+            if (!payload) return;
+            const { active, force } = payload;
+            if (active) {
+                this.isThrustButtonPressed = true;
+                if (typeof force === 'number') {
+                    this.currentThrustForce = force;
+                }
+            } else {
+                this.stopThrust();
+            }
+        });
+
+        // Rotation control from React UI
+        EventBus.on('ui-rotation-control', (payload: { angle: number; strength?: number }) => {
+            if (!payload || !this.player) return;
+            const { angle, strength } = payload;
+            // If strength provided, rotate smoothly; otherwise snap to angle
+            if (typeof strength === 'number') {
+                this.rotateShipTowards(angle, 16, strength);
+            } else {
+                this.player.setRotation(angle);
+                this.player.setAngularVelocity(0);
+            }
         });
     }
 
@@ -1623,15 +1707,15 @@ export default class GameScene extends Phaser.Scene {
             this.activeTether.destroy();
             this.activeTether = null;
         }
-        
-        // Pass both current score and total to GameOverScene
-        this.scene.start('GameOverScene', { 
-            score: this.score,
-            totalSpaceBucks: updatedTotal
+        // Pass both current score and total to GameOverScene inside Phaser's update cycle
+        this.time.delayedCall(0, () => {
+            this.scene.start('GameOverScene', { 
+                score: this.score,
+                totalSpaceBucks: updatedTotal
+            });
+            // Explicitly stop this scene to ensure shutdown is called
+            this.scene.stop('GameScene');
         });
-        
-        // Explicitly stop this scene to ensure shutdown is called
-        this.scene.stop('GameScene');
     }
     
     // Create the exit zone for ending the current haul

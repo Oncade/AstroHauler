@@ -1,0 +1,234 @@
+/* Responsive Design Utilities */
+
+/* Container queries for component-level responsiveness */
+.responsiveContainer {
+  container-type: inline-size;
+}
+
+/* Screen size utilities */
+.mobileOnly {
+  display: block;
+}
+
+.tabletOnly {
+  display: none;
+}
+
+.desktopOnly {
+  display: none;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .mobileOnly {
+    display: none;
+  }
+  
+  .tabletOnly {
+    display: block;
+  }
+  
+  .desktopOnly {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .mobileOnly {
+    display: none;
+  }
+  
+  .tabletOnly {
+    display: none;
+  }
+  
+  .desktopOnly {
+    display: block;
+  }
+}
+
+/* Orientation utilities */
+.portraitOnly {
+  display: block;
+}
+
+.landscapeOnly {
+  display: none;
+}
+
+@media (orientation: landscape) {
+  .portraitOnly {
+    display: none;
+  }
+  
+  .landscapeOnly {
+    display: block;
+  }
+}
+
+/* Touch device utilities */
+@media (hover: none) and (pointer: coarse) {
+  .touchDevice {
+    display: block;
+  }
+  
+  .nonTouchDevice {
+    display: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touchDevice {
+    display: none;
+  }
+  
+  .nonTouchDevice {
+    display: block;
+  }
+}
+
+/* Responsive grid layouts */
+.gameGrid {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* Mobile grid (portrait) */
+.gameGrid[data-device="mobile"][data-orientation="portrait"] {
+  grid-template-areas:
+    "score . buttons"
+    ". . ."
+    ". . ."
+    "touch . touch";
+  grid-template-rows: auto 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+/* Mobile grid (landscape) */
+.gameGrid[data-device="mobile"][data-orientation="landscape"] {
+  grid-template-areas:
+    "score . . buttons"
+    "touch . . touch";
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+/* Tablet grid */
+.gameGrid[data-device="tablet"] {
+  grid-template-areas:
+    "score . . buttons"
+    ". . . ."
+    "touch . . touch";
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  padding: var(--space-md);
+  gap: var(--space-md);
+}
+
+/* Desktop grid */
+.gameGrid[data-device="desktop"] {
+  grid-template-areas:
+    "score . . . buttons"
+    ". . . . ."
+    ". . . . .";
+  grid-template-rows: auto 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  padding: var(--space-lg);
+  gap: var(--space-lg);
+}
+
+/* Grid area assignments */
+.scoreArea {
+  grid-area: score;
+  justify-self: start;
+  align-self: start;
+}
+
+.buttonsArea {
+  grid-area: buttons;
+  justify-self: end;
+  align-self: start;
+}
+
+.touchControlsArea {
+  grid-area: touch;
+}
+
+.touchControlsLeft {
+  justify-self: start;
+  align-self: end;
+}
+
+.touchControlsRight {
+  justify-self: end;
+  align-self: end;
+}
+
+/* Flexbox utilities for component layouts */
+.flexRow {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-sm);
+}
+
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.flexCenter {
+  justify-content: center;
+  align-items: center;
+}
+
+.flexBetween {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flexEnd {
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Safe area handling for mobile devices */
+.safeArea {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Viewport units that account for mobile browsers */
+.fullViewport {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Container query breakpoints */
+@container (max-width: 400px) {
+  .responsiveContainer .compactLayout {
+    display: block;
+  }
+  
+  .responsiveContainer .expandedLayout {
+    display: none;
+  }
+}
+
+@container (min-width: 401px) {
+  .responsiveContainer .compactLayout {
+    display: none;
+  }
+  
+  .responsiveContainer .expandedLayout {
+    display: block;
+  }
+}
