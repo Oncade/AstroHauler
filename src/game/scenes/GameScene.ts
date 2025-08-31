@@ -327,13 +327,8 @@ export default class GameScene extends Phaser.Scene {
         // Listen for orientation changes
         this.scale.on('resize', this.handleScreenResize, this);
 
-        // Emit the ready event for React bridge
+        // Emit the ready event for React bridge (single emit is sufficient)
         EventBus.emit('current-scene-ready', this);
-        
-        // Also emit after a short delay to ensure React components are mounted
-        this.time.delayedCall(100, () => {
-            EventBus.emit('current-scene-ready', this);
-        });
 
         // Update all salvage objects to check for deposit zone overlap - safely
         const checkForDeposits = () => {

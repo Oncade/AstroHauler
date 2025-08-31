@@ -81,31 +81,23 @@ export const useGameState = () => {
 
   // End current haul
   const endHaul = useCallback(() => {
-    if (gameState.gameScene) {
-      EventBus.emit('ui-end-haul');
-    }
-  }, [gameState.gameScene]);
+    EventBus.emit('ui-end-haul');
+  }, []);
 
   // Tether control functions
   const toggleTether = useCallback(() => {
-    if (gameState.gameScene) {
-      EventBus.emit('ui-tether-toggle');
-    }
-  }, [gameState.gameScene]);
+    EventBus.emit('ui-tether-toggle');
+  }, []);
 
   // Thrust control functions
   const setThrust = useCallback((active: boolean, force?: number) => {
-    if (gameState.gameScene) {
-      EventBus.emit('ui-thrust-control', { active, force });
-    }
-  }, [gameState.gameScene]);
+    EventBus.emit('ui-thrust-control', { active, force });
+  }, []);
 
   // Rotation control
   const setRotation = useCallback((angle: number, strength: number = 1.0) => {
-    if (gameState.gameScene) {
-      EventBus.emit('ui-rotation-control', { angle, strength });
-    }
-  }, [gameState.gameScene]);
+    EventBus.emit('ui-rotation-control', { angle, strength });
+  }, []);
 
   useEffect(() => {
     // Listen for game events

@@ -176,7 +176,9 @@ export const TouchControls: React.FC = () => {
   }, [actions]);
 
   // Handle tether button
-  const handleTetherClick = useCallback(() => {
+  const handleTetherClick = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     actions.setTetherButton(true);
   }, [actions]);
 
@@ -303,7 +305,6 @@ export const TouchControls: React.FC = () => {
         <button
           className={`${styles.touchButton} ${styles.tetherButton} ${gameState.tetherActive ? styles.active : ''}`}
           onTouchStart={handleTetherClick}
-          onClick={handleTetherClick}
           style={transitionStyle}
           aria-label="Toggle tether"
         >
