@@ -88,11 +88,7 @@ export default class PreloaderScene extends Phaser.Scene {
             this.load.image(`salvage_${i}`, `assets/images/salvage_${i}.png`);
         }
         
-        // Load touch control assets
-        this.load.image('joystick-outer', 'assets/ui/joystick-outer.png');
-        this.load.image('joystick-inner', 'assets/ui/joystick-inner.png');
-        this.load.image('tether-button', 'assets/ui/tether-button.png');
-        this.load.image('thrust-button', 'assets/ui/thrust-button.png');
+        // Touch control assets are owned by React UI; no Phaser preload needed
         
         // Load particle effects
         this.load.image('thruster_particle', 'assets/vfx/thruster_particle.png');
