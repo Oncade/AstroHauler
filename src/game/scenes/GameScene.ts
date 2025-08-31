@@ -32,7 +32,6 @@ export default class GameScene extends Phaser.Scene {
     private hasPlayerLeftExitZone: boolean = false;
     private isPlayerEligibleToExit: boolean = false;
 
-    private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
     private totalSpaceBucks: number = 0;
     private music!: Phaser.Sound.BaseSound;
@@ -237,10 +236,8 @@ export default class GameScene extends Phaser.Scene {
             // this.keys remains {} which is safe
         }
 
-        // Setup Touch Controls if on a touch device
-        if (this.isTouchDevice) {
-            this.createTouchControls();
-        } else {
+        // No Phaser touch UI; React TouchControls emits via EventBus
+        if (!this.isTouchDevice) {
             // Desktop mouse setup
             // Prevent context menu so right-click can be used for tether toggle
             this.input.mouse?.disableContextMenu();
@@ -297,15 +294,6 @@ export default class GameScene extends Phaser.Scene {
         );
 /*
         // UI Elements
-        this.scoreText = this.add.text(16, 16, 'Score: 0', {
-            fontFamily: '"Roboto Mono", "Courier New", monospace',
-            fontSize: '32px',
-            color: '#fff',
-            // fixedWidth: 300 // Optional for alignment
-        }).setScrollFactor(0); // Keep UI fixed on screen
-
-        // Update Phaser score text after reset
-        this.scoreText.setText('Score: ' + this.score);
 */
         // UI buttons will be created after minimap setup
 
@@ -1322,9 +1310,6 @@ export default class GameScene extends Phaser.Scene {
         
         // Check if scene is still active before updating UI
         if (this.scene.isActive()) {
-            if (this.scoreText && this.scoreText.active) {
-                this.scoreText.setText('Score: ' + this.score);
-            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1418,9 +1403,6 @@ export default class GameScene extends Phaser.Scene {
         
         // Safely update UI only if scene is still active
         if (this.scene.isActive()) {
-            if (this.scoreText && this.scoreText.active) {
-                this.scoreText.setText('Score: ' + this.score);
-            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1594,7 +1576,9 @@ export default class GameScene extends Phaser.Scene {
     // Helper method to stop thrust and reset values
     stopThrust() {
         this.isThrustButtonPressed = false;
-        this.thrustButton.setTint(TouchControlsConfig.colors.normal);
+        if (this.thrustButton && this.thrustButton.active) {
+            this.thrustButton.setTint(TouchControlsConfig.colors.normal);
+        }
         
         // Stop the thrust ramp-up tween
         if (this.thrustTween) {
