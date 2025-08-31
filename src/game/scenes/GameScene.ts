@@ -30,6 +30,7 @@ export default class GameScene extends Phaser.Scene {
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private hasPlayerLeftExitZone: boolean = false;
+    private isPlayerEligibleToExit: boolean = false;
 
     private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
@@ -56,16 +57,12 @@ export default class GameScene extends Phaser.Scene {
 
     // Minimap
     private minimap?: Minimap;
-    private minimapButtonContainer?: Phaser.GameObjects.Container;
-    private minimapButtonIcon?: Phaser.GameObjects.Graphics;
+    // Minimap button removed; React controls visibility
     private worldWidth: number = 0;
     private worldHeight: number = 0;
     private isPausedForMinimap: boolean = false;
     
-    // UI Buttons
-    private exitButtonContainer?: Phaser.GameObjects.Container;
-    private helpButtonContainer?: Phaser.GameObjects.Container;
-    private showInstructions: boolean = false;
+    // Phaser UI buttons removed; React owns buttons and instructions
 
     // Fog of War
     private fogOfWar?: FogOfWar;
@@ -79,6 +76,13 @@ export default class GameScene extends Phaser.Scene {
     private isMobileDevice: boolean = false;
     private deviceMultiplier: number = 1.0;
     private screenOrientation: 'portrait' | 'landscape' = 'landscape';
+
+    // Cached UI listener refs for cleanup
+    private onUiEndHaul?: () => void;
+    private onUiMinimapToggle?: (show: boolean) => void;
+    private onUiTetherToggle?: () => void;
+    private onUiThrustControl?: (payload: { active: boolean; force?: number }) => void;
+    private onUiRotationControl?: (payload: { angle: number; strength?: number }) => void;
 
     constructor() {
         super('GameScene');
@@ -121,6 +125,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Load persisted total SpaceBucks from meta progress
         this.loadTotalSpaceBucks();
+        // Inform React HUD immediately
+        EventBus.emit('spacebucks-updated', this.totalSpaceBucks);
         
         // Reset current haul score on scene start
         this.score = 0;
@@ -376,11 +382,7 @@ export default class GameScene extends Phaser.Scene {
         });
         this.minimap.start(this.player, this.parentShip, this.salvageGroup);
 
-        // Create minimap toggle button (starts hidden state)
-        //this.createMinimapButton();
-        
-        // Create UI buttons (Exit, Help) positioned in upper right corner
-        //this.createUIButtons();
+        // Minimap button and UI buttons removed (React owns UI)
         
         // Setup React UI event listeners
         this.setupReactUIEventListeners();
@@ -429,71 +431,10 @@ export default class GameScene extends Phaser.Scene {
         // Resize/rebuild minimap for new screen size
         this.minimap?.handleResize(this.isMobileDevice);
 
-        // Reposition UI buttons
-        this.positionUIButtons();
-        this.positionMinimapButton();
+        // No Phaser UI to reposition
     }
 
-    // --- Minimap --- (now handled by Minimap class)
-    private createMinimapButton() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        const posX = width - size - margin;
-        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
-
-        this.minimapButtonContainer = this.add.container(posX, posY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
-
-        // Button background
-        const bg = this.add.graphics();
-        bg.fillStyle(0x0b0b12, 0.85);
-        bg.fillRoundedRect(0, 0, size, size, 12);
-        bg.lineStyle(2, 0x00ffcc, 0.7);
-        bg.strokeRoundedRect(0, 0, size, size, 12);
-        this.minimapButtonContainer.add(bg);
-
-        // Icon: stylized radar/map glyph
-        this.minimapButtonIcon = this.add.graphics();
-        const cx = size / 2;
-        const cy = size / 2;
-        const r = size * 0.32;
-        this.minimapButtonIcon.lineStyle(3, 0x00ff88, 1);
-        this.minimapButtonIcon.strokeCircle(cx, cy, r);
-        this.minimapButtonIcon.lineStyle(2, 0x00ffaa, 0.9);
-        this.minimapButtonIcon.beginPath();
-        this.minimapButtonIcon.moveTo(cx, cy);
-        this.minimapButtonIcon.lineTo(cx + r, cy - r * 0.2);
-        this.minimapButtonIcon.strokePath();
-        // grid hint
-        this.minimapButtonIcon.lineStyle(1, 0x00ffcc, 0.6);
-        this.minimapButtonIcon.strokeRect(cx - r * 0.8, cy - r * 0.8, r * 1.6, r * 1.6);
-        this.minimapButtonContainer.add(this.minimapButtonIcon);
-
-        // Hover/press feedback
-        this.minimapButtonContainer.on('pointerover', () => bg.setAlpha(1));
-        this.minimapButtonContainer.on('pointerout', () => bg.setAlpha(0.85));
-        this.minimapButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.minimapButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            const visible = this.minimap?.toggle();
-            if (visible !== undefined) {
-                this.setPausedForMinimap(visible);
-            }
-        });
-    }
-
-    private positionMinimapButton() {
-        if (!this.minimapButtonContainer) return;
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        const posX = width - size - margin;
-        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
-        this.minimapButtonContainer.setPosition(posX, posY);
-    }
+    // Minimap button removed; React toggles via EventBus
 
     private setPausedForMinimap(paused: boolean) {
         this.isPausedForMinimap = paused;
@@ -504,93 +445,15 @@ export default class GameScene extends Phaser.Scene {
         EventBus.emit('game-pause-changed', paused);
     }
 
-    // Create UI buttons (Exit, Help) in upper right corner
-    private createUIButtons() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        
-        // Exit button - top right
-        const exitPosX = width - size - margin;
-        const exitPosY = margin;
-        
-        this.exitButtonContainer = this.add.container(exitPosX, exitPosY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
-
-        // Exit button background
-        const exitBg = this.add.graphics();
-        exitBg.fillStyle(0x330000, 0.85);
-        exitBg.fillRoundedRect(0, 0, size, size, 12);
-        exitBg.lineStyle(2, 0xff3300, 0.8);
-        exitBg.strokeRoundedRect(0, 0, size, size, 12);
-        this.exitButtonContainer.add(exitBg);
-
-        // Exit button text
-        const exitText = this.add.text(size / 2, size / 2, 'EXIT', {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#ff3300',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.exitButtonContainer.add(exitText);
-
-        // Help button - below exit button
-        const helpPosX = width - size - margin;
-        const helpPosY = margin + size + 10;
-        
-        this.helpButtonContainer = this.add.container(helpPosX, helpPosY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
-
-        // Help button background
-        const helpBg = this.add.graphics();
-        helpBg.fillStyle(0x003300, 0.85);
-        helpBg.fillRoundedRect(0, 0, size, size, 12);
-        helpBg.lineStyle(2, 0x00ff00, 0.7);
-        helpBg.strokeRoundedRect(0, 0, size, size, 12);
-        this.helpButtonContainer.add(helpBg);
-
-        // Help button text
-        const helpText = this.add.text(size / 2, size / 2, 'HELP', {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#00ff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.helpButtonContainer.add(helpText);
-
-        // Exit button events
-        this.exitButtonContainer.on('pointerover', () => exitBg.setAlpha(1));
-        this.exitButtonContainer.on('pointerout', () => exitBg.setAlpha(0.85));
-        this.exitButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.exitButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            this.endHaul();
-        });
-
-        // Help button events
-        this.helpButtonContainer.on('pointerover', () => helpBg.setAlpha(1));
-        this.helpButtonContainer.on('pointerout', () => helpBg.setAlpha(0.85));
-        this.helpButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.helpButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            this.toggleInstructions();
-        });
-
-
-    }
+    // Phaser-created UI buttons removed; React handles UI
 
     // Setup event listeners for React UI components
     private setupReactUIEventListeners() {
-        EventBus.on('ui-end-haul', () => {
-            this.endHaul();
-        });
+        this.onUiEndHaul = () => { this.endHaul(); };
+        EventBus.on('ui-end-haul', this.onUiEndHaul);
 
         // Minimap toggle from React UI
-        EventBus.on('ui-minimap-toggle', (show: boolean) => {
+        this.onUiMinimapToggle = (show: boolean) => {
             if (!this.minimap) return;
             if (show) {
                 this.minimap.show();
@@ -600,10 +463,11 @@ export default class GameScene extends Phaser.Scene {
             this.setPausedForMinimap(show);
             // Inform React of final minimap visibility state
             EventBus.emit('minimap-state-changed', this.minimap.isVisible());
-        });
+        };
+        EventBus.on('ui-minimap-toggle', this.onUiMinimapToggle);
 
         // Tether toggle from React UI
-        EventBus.on('ui-tether-toggle', () => {
+        this.onUiTetherToggle = () => {
             if (this.activeTether) {
                 console.log('Tether toggle: activeTether exists');
                 // Allow active tether to handle press first (e.g., bond add or reattach)
@@ -626,10 +490,11 @@ export default class GameScene extends Phaser.Scene {
                 this.attemptTetherAttach();
                 EventBus.emit('tether-state-changed', !!this.activeTether);
             }
-        });
+        };
+        EventBus.on('ui-tether-toggle', this.onUiTetherToggle);
 
         // Thrust control from React UI
-        EventBus.on('ui-thrust-control', (payload: { active: boolean; force?: number }) => {
+        this.onUiThrustControl = (payload: { active: boolean; force?: number }) => {
             if (!payload) return;
             const { active, force } = payload;
             if (active) {
@@ -640,10 +505,11 @@ export default class GameScene extends Phaser.Scene {
             } else {
                 this.stopThrust();
             }
-        });
+        };
+        EventBus.on('ui-thrust-control', this.onUiThrustControl);
 
         // Rotation control from React UI
-        EventBus.on('ui-rotation-control', (payload: { angle: number; strength?: number }) => {
+        this.onUiRotationControl = (payload: { angle: number; strength?: number }) => {
             if (!payload || !this.player) return;
             const { angle, strength } = payload;
             // If strength provided, rotate smoothly; otherwise snap to angle
@@ -653,115 +519,13 @@ export default class GameScene extends Phaser.Scene {
                 this.player.setRotation(angle);
                 this.player.setAngularVelocity(0);
             }
-        });
+        };
+        EventBus.on('ui-rotation-control', this.onUiRotationControl);
     }
 
-    // Position UI buttons for screen resize
-    private positionUIButtons() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        
-        if (this.exitButtonContainer) {
-            const exitPosX = width - size - margin;
-            const exitPosY = margin;
-            this.exitButtonContainer.setPosition(exitPosX, exitPosY);
-        }
-        
-        if (this.helpButtonContainer) {
-            const helpPosX = width - size - margin;
-            const helpPosY = margin + size + 10;
-            this.helpButtonContainer.setPosition(helpPosX, helpPosY);
-        }
-    }
+    // No Phaser UI to reposition
 
-    // Toggle instructions display
-    private toggleInstructions() {
-        this.showInstructions = !this.showInstructions;
-        
-        if (this.showInstructions) {
-            this.showInstructionsPanel();
-        } else {
-            this.hideInstructionsPanel();
-        }
-    }
-
-    // Show instructions panel
-    private showInstructionsPanel() {
-        // Remove existing panel if it exists
-        this.hideInstructionsPanel();
-        
-        const { width, height } = this.scale;
-        const panelWidth = this.isMobileDevice ? Math.min(width * 0.9, 400) : 400;
-        const panelHeight = this.isMobileDevice ? Math.min(height * 0.7, 500) : 500;
-        const panelX = width - panelWidth - 20;
-        const panelY = 80;
-        
-        // Create instructions panel container
-        const instructionsContainer = this.add.container(panelX, panelY)
-            .setScrollFactor(0)
-            .setDepth(1300)
-            .setName('instructionsPanel');
-        
-        // Panel background
-        const panelBg = this.add.graphics();
-        panelBg.fillStyle(0x000000, 0.95);
-        panelBg.fillRoundedRect(0, 0, panelWidth, panelHeight, 12);
-        panelBg.lineStyle(2, 0x00ff00, 0.8);
-        panelBg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 12);
-        instructionsContainer.add(panelBg);
-        
-        // Title
-        const title = this.add.text(panelWidth / 2, 30, 'GAME INSTRUCTIONS', {
-            fontSize: this.isMobileDevice ? '18px' : '20px',
-            color: '#00ff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        instructionsContainer.add(title);
-        
-        // Instructions text
-        const controlsText = this.isMobileDevice 
-            ? 'CONTROLS:\n• Hold thrust button to move\n• Use joystick to rotate\n• Tap tether button to grab salvage'
-            : 'CONTROLS:\n• W/Up - Thrust forward\n• A/D or Arrow keys - Rotate\n• Space - Tether/Release salvage';
-            
-        const instructions = this.add.text(20, 70, 
-            `${controlsText}\n\nHOW TO COLLECT SPACEBUCKS:\n• Salvage auto-collects in GREEN ZONE\n• Tether salvage to drag it\n• Move salvage into deposit zone\n• Watch for "DEPOSIT SUCCESS!"\n\nEND HAUL:\n• Fly into RED EXIT ZONE\n• Your SpaceBucks are saved\n• Return to base for upgrades`, {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#ffffff',
-            fontFamily: 'Arial, sans-serif',
-            wordWrap: { width: panelWidth - 40 },
-            lineSpacing: 4
-        });
-        instructionsContainer.add(instructions);
-        
-        // Close button
-        const closeButton = this.add.text(panelWidth / 2, panelHeight - 30, '[ CLOSE ]', {
-            fontSize: this.isMobileDevice ? '14px' : '16px',
-            color: '#ffff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold',
-            backgroundColor: '#333333',
-            padding: { left: 10, right: 10, top: 5, bottom: 5 }
-        }).setOrigin(0.5).setInteractive();
-        
-        closeButton.on('pointerdown', () => {
-            this.hideInstructionsPanel();
-            this.showInstructions = false;
-        });
-        closeButton.on('pointerover', () => closeButton.setStyle({ backgroundColor: '#555555' }));
-        closeButton.on('pointerout', () => closeButton.setStyle({ backgroundColor: '#333333' }));
-        
-        instructionsContainer.add(closeButton);
-    }
-
-    // Hide instructions panel
-    private hideInstructionsPanel() {
-        const existingPanel = this.children.getByName('instructionsPanel');
-        if (existingPanel) {
-            existingPanel.destroy();
-        }
-    }
+    // Instructions panel removed; React owns this UI
 
     // Touch coordinate debugging completed - system works correctly
 
@@ -1701,6 +1465,8 @@ export default class GameScene extends Phaser.Scene {
         // Persist SpaceBucks via meta system
         addSpaceBucks(this.score);
         const updatedTotal = loadMetaProgress().totalSpaceBucks;
+        // Inform React about new total immediately
+        EventBus.emit('spacebucks-updated', updatedTotal);
 
         // Clean up tether before changing scene
         if (this.activeTether) {
@@ -1810,130 +1576,25 @@ export default class GameScene extends Phaser.Scene {
             console.log('Player left exit zone, making it visible');
         }
         
-        // Get reference to existing prompt if it exists
-        const exitPrompt = this.children.getByName('exitPrompt');
-        
+        // Determine exit eligibility: inside zone, has left once, nearly stopped
+        let eligible = false;
         if (boundsOverlap && this.hasPlayerLeftExitZone) {
-            // Only show exit zone functionality after player has left it once and returned
-            // Check player's velocity to see if they're almost stopped
             const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
             const velocityMagnitude = Math.sqrt(
                 playerBody.velocity.x * playerBody.velocity.x + 
                 playerBody.velocity.y * playerBody.velocity.y
             );
-            
-            // Only show prompt if velocity is below threshold (almost stopped)
-            const velocityThreshold = 50; // Adjust this value as needed
-            
-            if (velocityMagnitude <= velocityThreshold) {
-                // Player is in exit zone and almost stopped, show the prompt
-                if (!exitPrompt) {
-                    this.showExitPrompt();
-                }
-            } else if (exitPrompt) {
-                // Player is moving too fast, hide prompt if visible
-                this.hideExitPrompt();
-            }
-        } else if (exitPrompt) {
-            // Player has left the exit zone while prompt was visible, hide it
-            this.hideExitPrompt();
+            const velocityThreshold = 50;
+            eligible = velocityMagnitude <= velocityThreshold;
+        }
+
+        if (eligible !== this.isPlayerEligibleToExit) {
+            this.isPlayerEligibleToExit = eligible;
+            EventBus.emit('player-exit-zone-changed', eligible);
         }
     }
     
-    // Show exit confirmation when player enters exit zone
-    showExitPrompt() {
-        // Check if prompt already exists to prevent duplicates
-        if (this.children.getByName('exitPrompt')) return;
-        
-        const { width, height } = this.scale;
-        
-        // Create prompt container
-        this.add.rectangle(
-            width / 2, 
-            height / 2, 
-            400, 
-            200, 
-            0x000000, 
-            0.8
-        ).setScrollFactor(0).setDepth(1000).setName('exitPrompt');
-        
-        this.add.text(
-            width / 2, 
-            height / 2 - 40, 
-            'End this haul and return to base?', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#ffffff',
-                align: 'center'
-            }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setName('exitPromptText');
-        
-        const confirmButton = this.add.text(
-            width / 2 - 80, 
-            height / 2 + 30, 
-            '[ Yes ]', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#00ff00',
-                backgroundColor: '#333333',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 }
-            }
-        ).setOrigin(0.5)
-         .setScrollFactor(0)
-         .setDepth(1001)
-         .setInteractive()
-         .setName('exitPromptYesBtn');
-        
-        const cancelButton = this.add.text(
-            width / 2 + 80, 
-            height / 2 + 30, 
-            '[ No ]', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#ff0000',
-                backgroundColor: '#333333',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 }
-            }
-        ).setOrigin(0.5)
-         .setScrollFactor(0)
-         .setDepth(1001)
-         .setInteractive()
-         .setName('exitPromptNoBtn');
-        
-        // Button event handlers
-        confirmButton.on('pointerdown', () => {
-            this.endHaul();
-        });
-        
-        cancelButton.on('pointerdown', () => {
-            // Remove the prompt elements
-            this.hideExitPrompt();
-        });
-        
-        // Add hover effects
-        confirmButton.on('pointerover', () => confirmButton.setStyle({ backgroundColor: '#007700' }));
-        confirmButton.on('pointerout', () => confirmButton.setStyle({ backgroundColor: '#333333' }));
-        
-        cancelButton.on('pointerover', () => cancelButton.setStyle({ backgroundColor: '#770000' }));
-        cancelButton.on('pointerout', () => cancelButton.setStyle({ backgroundColor: '#333333' }));
-    }
-
-    // Hide the exit prompt when player leaves the exit zone
-    hideExitPrompt() {
-        const promptBg = this.children.getByName('exitPrompt');
-        const promptText = this.children.getByName('exitPromptText');
-        const confirmButton = this.children.getByName('exitPromptYesBtn');
-        const cancelButton = this.children.getByName('exitPromptNoBtn');
-        
-        // Destroy all prompt elements if they exist
-        if (promptBg) promptBg.destroy();
-        if (promptText) promptText.destroy();
-        if (confirmButton) confirmButton.destroy();
-        if (cancelButton) cancelButton.destroy();
-    }
+    // Legacy exit prompt removed; React controls the prompt via EventBus
 
     // Helper method to stop thrust and reset values
     stopThrust() {
@@ -1978,6 +1639,13 @@ export default class GameScene extends Phaser.Scene {
         
         // Remove the resize event listener
         this.scale.off('resize', this.handleScreenResize, this);
+
+        // Clean up EventBus listeners
+        if (this.onUiEndHaul) EventBus.off('ui-end-haul', this.onUiEndHaul);
+        if (this.onUiMinimapToggle) EventBus.off('ui-minimap-toggle', this.onUiMinimapToggle);
+        if (this.onUiTetherToggle) EventBus.off('ui-tether-toggle', this.onUiTetherToggle);
+        if (this.onUiThrustControl) EventBus.off('ui-thrust-control', this.onUiThrustControl);
+        if (this.onUiRotationControl) EventBus.off('ui-rotation-control', this.onUiRotationControl);
     }
 
     // Helper method to select and play random background music
