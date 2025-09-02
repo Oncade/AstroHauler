@@ -103,11 +103,11 @@ Modular organization by scene
   - No Phaser-drawn UI; React-only components render UI; Phaser handles gameplay.
   - Listeners registered once and cleaned up; no duplicated UI across layers.
 
-- [ ] MainMenuScene
-  - [ ] Inventory Phaser UI (title text, start button, help/instructions if any).
-  - [ ] Create React `MainMenu` to render the menu; emit intents (e.g., `ui-start-game`) via EventBus.
-  - [ ] Add minimal listener in `MainMenuScene` for intents and remove Phaser-drawn buttons/text.
-  - [ ] Acceptance: no Phaser UI drawn; React-only menu; single `current-scene-ready` emit.
+- [x] MainMenuScene
+  - [x] Inventory Phaser UI (title text, start button, help/instructions if any).
+  - [x] Create React `MainMenu` to render the menu; emit intents (`ui-start-game`) via EventBus.
+  - [x] Add minimal listener in `MainMenuScene` for intents and remove Phaser-drawn start button.
+  - [x] Acceptance: no Phaser start button; React-only menu; single `current-scene-ready` emit.
 
 - [ ] CommandCenterScene
   - [ ] Inventory Phaser UI (upgrade panels, buttons, labels).

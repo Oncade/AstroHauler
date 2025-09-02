@@ -6,6 +6,7 @@ import { Events } from 'phaser';
  *
  * UI → Phaser (intents)
  * - 'ui-end-haul'                          ()
+ * - 'ui-start-game'                        ()
  * - 'ui-minimap-toggle'                    (visible: boolean)
  * - 'ui-tether-toggle'                     ()
  * - 'ui-thrust-control'                    ({ active: boolean; force?: number })
