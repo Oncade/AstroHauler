@@ -36,10 +36,10 @@ This checklist consolidates gameplay logic in `src/game/scenes/GameScene.ts` and
 ---
 
 ### React components alignment
-- [ ] `GameHUD`: stays as the single mounted HUD during `GameScene`; ensure it subscribes only to EventBus events and emits intents—no direct DOM/canvas manipulation.
+- [x] `GameHUD`: stays as the single mounted HUD during `GameScene`; ensure it subscribes only to EventBus events and emits intents—no direct DOM/canvas manipulation.
 - [x] `TouchControls`: the only source of touch input; verify joystick/thrust/tether send `ui-rotation-control`, `ui-thrust-control`, `ui-tether-toggle` and do not try to mirror Phaser visuals.
   - [x] Prevented tether double-trigger by using touch-only handler with stopPropagation/preventDefault.
-- [ ] `GameButtons`: Exit triggers confirmation flow in React (show `ExitPrompt`) or directly emits `ui-end-haul` per final UX decision; Help toggles `InstructionsPanel`; Map toggles minimap via EventBus.
+- [x] `GameButtons`: Exit triggers confirmation flow in React (show `ExitPrompt`) or directly emits `ui-end-haul` per final UX decision; Help toggles `InstructionsPanel`; Map toggles minimap via EventBus.
 - [ ] Remove legacy/empty React placeholders that are no longer needed (e.g., `CommandCenter`, `GameOverScreen`) or keep them explicitly as stubs with a clear comment until scenes are finalized.
 
 ---
@@ -80,5 +80,59 @@ This checklist consolidates gameplay logic in `src/game/scenes/GameScene.ts` and
 - [ ] Consolidate event names and payloads into an enum/namespace and auto-generate type-safe hooks.
 - [ ] Add feature flags for alternate control schemes and accessibility options.
 - [ ] Consider migrating to a small state container (e.g., Zustand) for UI state derived from EventBus.
+
+
+---
+
+### Scene-by-scene React migration plan (swap remaining Phaser UI for React)
+
+Modular organization by scene
+- Organize React UI by scene to keep ownership clear and changes localized.
+- Suggested structure (create as needed):
+  - `src/components/game-ui/scenes/<SceneName>/` — scene-specific UI components
+  - `src/components/game-ui/scenes/<SceneName>/index.ts` — barrel export
+  - `src/components/game-ui/hooks/scenes/use<SceneName>.ts` — scene-specific UI hooks (optional)
+  - `src/styles/scenes/<scene>.module.css` — scene-specific styles (optional)
+- Naming & intents
+  - Reuse canonical intents where possible. If a new intent is needed, add to `EventBus.ts` JSDoc immediately.
+  - Keep payloads small and typed; avoid `any`.
+- Event lifecycle & cleanup
+  - Register EventBus listeners in React `useEffect` and in Phaser `create()`; remove in cleanup/`shutdown()`.
+  - Emit `current-scene-ready` once at end of each Scene `create()`.
+- Acceptance per scene
+  - No Phaser-drawn UI; React-only components render UI; Phaser handles gameplay.
+  - Listeners registered once and cleaned up; no duplicated UI across layers.
+
+- [ ] MainMenuScene
+  - [ ] Inventory Phaser UI (title text, start button, help/instructions if any).
+  - [ ] Create React `MainMenu` to render the menu; emit intents (e.g., `ui-start-game`) via EventBus.
+  - [ ] Add minimal listener in `MainMenuScene` for intents and remove Phaser-drawn buttons/text.
+  - [ ] Acceptance: no Phaser UI drawn; React-only menu; single `current-scene-ready` emit.
+
+- [ ] CommandCenterScene
+  - [ ] Inventory Phaser UI (upgrade panels, buttons, labels).
+  - [ ] Create/extend React `CommandCenter` to render UI; emit intents for upgrade actions.
+  - [ ] In scene, listen for intents, apply gameplay changes, and emit HUD updates; remove Phaser UI.
+  - [ ] Acceptance: upgrades flow through EventBus; no Phaser UI elements.
+
+- [ ] GameOverScene
+  - [ ] Remove any Phaser-drawn summary UI; rely on React `GameOverScreen` only.
+  - [ ] Ensure scene emits `current-scene-ready` once and provides score/total via registry/EventBus.
+  - [ ] Acceptance: React shows results; no duplicate text/buttons in Phaser.
+
+- [ ] IntroVideoScene
+  - [ ] Keep video playback in Phaser; move any skip/continue controls to React overlay.
+  - [ ] Emit `ui-skip-intro` intent; have scene listen and transition.
+  - [ ] Acceptance: no Phaser buttons; React-only controls; clean listener cleanup on shutdown.
+
+- [ ] BootScene / PreloaderScene
+  - [x] Remove React-only UI preloads (done).
+  - [ ] If any progress UI is kept, keep it minimal in Phaser; otherwise show a React loading overlay.
+  - [ ] Acceptance: no redundant loading UI across React/Phaser; no React-only asset preloads.
+
+Guidelines (apply to each scene above)
+- Add listeners once in `create()`, store handler refs, and `off` them in `shutdown()`.
+- Emit `current-scene-ready` once at the end of `create()`.
+- Do not draw UI in Phaser; replace with React components emitting/consuming canonical EventBus events.
 
 

@@ -38,6 +38,13 @@ Enforcement:
 - Keep React for UI only. Do not mirror Phaser visuals in React. Do not manipulate the Phaser canvas from React.
 - Touch input belongs to React (`TouchControls`); desktop inputs (keyboard/mouse) remain in Phaser.
 
+### Modular organization by scene (required)
+- Place scene-specific UI under `src/components/game-ui/scenes/<SceneName>/`.
+- Provide a local `index.ts` barrel in each scene folder to simplify imports.
+- Optional: create `src/components/game-ui/hooks/scenes/use<SceneName>.ts` for scene-only UI logic.
+- Optional: place styles in `src/styles/scenes/<scene>.module.css` to keep scope clear.
+- When adding a new UI intent for a scene, update `EventBus.ts` JSDoc and prefer reusing canonicals.
+
 ## Phaser Scene Guidelines
 
 - Add EventBus listeners once per scene lifecycle in `create()` and remove them in `shutdown()` using stored handler refs.
@@ -45,6 +52,7 @@ Enforcement:
 - Do not draw UI in Phaser (no buttons/instructions). Emit state and let React render.
 - Keep desktop inputs in Phaser (keyboard, right-click tether) and ensure no conflicts with React events.
 - Emit updates for HUD (`score-updated`, `spacebucks-updated`) instead of changing Phaser text objects.
+ - Use stored handler refs for EventBus; add listeners in `create()`, remove in `shutdown()`.
 
 ## Asset & Preload
 
