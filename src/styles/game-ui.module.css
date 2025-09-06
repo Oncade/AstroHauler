@@ -424,6 +424,355 @@
   opacity: 0.9;
 }
 
+/* Command Center Overlay (CSS-driven, responsive) */
+.commandCenterOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-size: cover;
+  background-position: center;
+  z-index: var(--z-ui-modal);
+  overflow: auto;
+}
+
+/* Command Center responsive grid */
+.ccLayout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto auto;
+  gap: var(--space-md);
+  padding: clamp(12px, 4vw, 28px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ccHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ccTitle {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(18px, 2.6vh, 28px);
+  color: var(--color-primary);
+}
+
+.ccBucksBadge {
+  background: var(--bg-panel);
+  border: var(--border-width) solid var(--color-secondary);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-secondary);
+  font-weight: bold;
+}
+
+.ccBucksValue { color: var(--color-accent); }
+
+.ccCard {
+  background: var(--bg-panel);
+  border: var(--border-width) solid var(--color-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: clamp(12px, 2.5vmin, 20px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+}
+
+/* Panels placement on larger screens */
+@media (min-width: 900px) {
+  .ccLayout {
+    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "header header header"
+      "ship viewport upgrades";
+  }
+  .ccHeader { grid-area: header; }
+  .ccShipPanel { grid-area: ship; }
+  .ccViewportPanel { grid-area: viewport; }
+  .ccUpgradesPanel { grid-area: upgrades; }
+}
+
+/* Landscape mobile/tablet layout */
+@media (orientation: landscape) and (max-width: 899px) {
+  .ccLayout {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "header header"
+      "ship viewport"
+      "upgrades viewport";
+  }
+  .ccHeader { grid-area: header; }
+  .ccShipPanel { grid-area: ship; }
+  .ccViewportPanel { grid-area: viewport; }
+  .ccUpgradesPanel { grid-area: upgrades; }
+}
+
+.ccSectionTitle {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(12px, 2vh, 18px);
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+/* Ship Panel */
+.ccShipArt {
+  width: 100%;
+  max-width: 320px;
+  object-fit: contain;
+}
+
+.ccShipStats {
+  margin-top: var(--space-sm);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xs) var(--space-sm);
+}
+
+.ccStatRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(11px, 1.8vh, 15px);
+  color: #ffffff;
+}
+
+.ccShipCarousel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-sm);
+  align-items: center;
+  margin: var(--space-sm) 0;
+}
+
+.ccShipNavBtn {
+  width: 44px;
+  height: 44px;
+}
+
+.ccShipSummary {
+  display: grid;
+  gap: 4px;
+}
+
+.ccShipName { font-weight: bold; color: var(--color-primary); }
+.ccShipDesc { color: #ffffff; font-size: 0.9em; }
+.ccShipCost { color: var(--color-secondary); font-size: 0.9em; }
+
+.ccPrimary {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Viewport Panel */
+.ccViewportFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  border: 2px solid rgba(0,255,204,0.35);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ccViewportVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Upgrades */
+.ccUpgradeList {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.ccUpgradeBtn {
+  width: 100%;
+  justify-content: space-between;
+  display: inline-flex;
+}
+
+.ccUpgradeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mission Panel */
+.ccMissionBody {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.ccMissionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  color: #ffffff;
+}
+
+.ccActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.ccFullButton { width: 100%; }
+
+.ccActionStart { border-color: #00ff00; color: #00ff00; }
+.ccActionReturn { border-color: #ff5555; color: #ff5555; }
+
+/* Scale with viewport; positions align to original Phaser percents */
+.ccViewport {
+  position: absolute;
+  left: 45.5%;
+  top: 39%;
+  transform: translate(-50%, -50%);
+  width: min(18vw, 22vh);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 2px solid rgba(0,255,204,0.5);
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+
+.ccShipImage {
+  position: absolute;
+  left: 20%;
+  top: 25%;
+  width: clamp(80px, 12vw, 200px);
+  transform: translate(-50%, -50%);
+}
+
+.ccShipLabel {
+  position: absolute;
+  left: 20%;
+  top: 41%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(12px, 2.2vh, 24px);
+  color: #ffaa00;
+}
+
+.ccStatsText {
+  position: absolute;
+  left: 20%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(10px, 1.8vh, 18px);
+  color: #ffffff;
+  white-space: pre-line;
+  text-align: left;
+}
+
+.ccBucks {
+  position: absolute;
+  left: 65%;
+  top: 61%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(14px, 2.6vh, 28px);
+  color: #ffff00;
+  text-shadow: 0 1px 0 #000;
+}
+
+.ccMissionTitle {
+  position: absolute;
+  left: 46%;
+  top: 70%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(12px, 2.2vh, 24px);
+  color: #33aaff;
+}
+
+.ccMissionText {
+  position: absolute;
+  left: 46%;
+  top: 77%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(10px, 1.8vh, 18px);
+  color: #ffffff;
+  text-align: center;
+}
+
+.ccActionButtonRight,
+.ccActionButtonLeft {
+  position: absolute;
+  top: 85%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  min-width: clamp(120px, 20vmin, 280px);
+  padding: clamp(8px, 2vmin, 16px) clamp(16px, 3vmin, 32px);
+  font-size: clamp(12px, 2vmin, 20px);
+  line-height: 1.1;
+}
+
+.ccActionButtonRight { left: 85%; border-color: #00ff00; color: #00ff00; }
+.ccActionButtonLeft { left: 15%; border-color: #ff0000; color: #ff0000; }
+
+.ccUpgrade {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: auto;
+  min-width: clamp(120px, 18vmin, 240px);
+  padding: clamp(6px, 1.6vmin, 12px) clamp(10px, 2vmin, 20px);
+  font-size: clamp(10px, 1.6vmin, 16px);
+  border-color: #33ccff;
+  color: #a9f7ff;
+}
+
+.ccShipSelectLabel {
+  position: absolute;
+  left: 20%;
+  top: 43%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(10px, 1.8vh, 18px);
+  color: #ffaa00;
+}
+
+.ccShipInfo {
+  position: absolute;
+  left: 20%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: clamp(10px, 1.8vh, 16px);
+  color: #ffffff;
+}
+
+.ccShipNav {
+  position: absolute;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  width: clamp(32px, 6vmin, 56px);
+  height: clamp(32px, 6vmin, 56px);
+  padding: 0;
+  font-size: clamp(12px, 2.5vmin, 20px);
+}
+
+.ccShipSelect {
+  position: absolute;
+  left: 20%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  min-width: clamp(140px, 22vmin, 300px);
+  padding: clamp(6px, 1.8vmin, 14px) clamp(12px, 2.6vmin, 24px);
+  font-size: clamp(11px, 1.8vmin, 18px);
+}
+
 .modalTitle {
   color: var(--color-primary);
   font-size: var(--font-size-xl);
