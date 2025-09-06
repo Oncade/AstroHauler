@@ -41,7 +41,7 @@ export default class CommandCenterScene extends Phaser.Scene {
 
         // Register EventBus listeners for React overlay intents
         this.onStartHaul = () => {
-            this.scene.start('IntroVideoScene');
+            this.scene.start('GameScene');
             this.scene.stop('CommandCenterScene');
         };
         this.onReturnToMenu = () => {
