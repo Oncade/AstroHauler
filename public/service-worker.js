@@ -1,17 +1,14 @@
 const CACHE_NAME = 'astro-hauler-cache-v1';
+// All URLs are relative to the SW registration scope (GitHub Pages subpath)
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.png',
-  '/style.css',
-  '/assets/icons/icon-192.png',
-  '/assets/icons/icon-512.png',
-  // Include bundle files that will be generated at build time
-  // These paths will depend on your Vite build output
-  '/assets/index-*.js',
-  '/assets/index-*.css'
-  // Note: Add specific game assets as needed
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.png',
+  './style.css',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png'
+  // Avoid wildcards here; rely on runtime cache for hashed bundles
 ];
 
 self.addEventListener('install', evt => {
@@ -37,7 +34,13 @@ self.addEventListener('activate', evt => {
 
 self.addEventListener('fetch', evt => {
   evt.respondWith(
-    caches.match(evt.request)
-      .then(cached => cached || fetch(evt.request))
+    caches.match(evt.request).then(cached => {
+      if (cached) return cached;
+      return fetch(evt.request).then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(evt.request, clone));
+        return response;
+      }).catch(() => cached);
+    })
   );
 }); 
