@@ -5,6 +5,7 @@ import { MainMenu } from './components/MainMenu';
 import { CommandCenter } from './components/CommandCenter';
 import { GameUI } from './components/GameUI';
 import { GameOverScreen } from './components/GameOverScreen';
+import { GameHUD } from './components/game-ui/GameHUD';
 import InstallButton from './components/InstallButton';
 
 function App() {
@@ -61,7 +62,7 @@ function App() {
             case 'CommandCenterScene':
                 return <CommandCenter />;
             case 'GameScene':
-                return <GameUI score={score} totalSpaceBucks={totalSpaceBucks} />;
+                return <GameHUD />;
             case 'GameOverScene':
                 // Important: Return empty component to avoid duplication
                 return <GameOverScreen />;

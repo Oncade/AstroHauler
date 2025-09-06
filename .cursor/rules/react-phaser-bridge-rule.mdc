@@ -4,6 +4,84 @@ globs:
 alwaysApply: true
 ---
 
+# React–Phaser Bridge Rule
+
+Purpose: Ensure all new UI uses the React↔Phaser bridge correctly, avoids duplicated UI in Phaser, and always updates the canonical events in `EventBus`.
+
+## Canonical EventBus Events
+
+UI → Phaser (intents)
+- `ui-end-haul` ()
+- `ui-minimap-toggle` (visible: boolean)
+- `ui-tether-toggle` ()
+- `ui-thrust-control` ({ active: boolean; force?: number })
+- `ui-rotation-control` ({ angle: number; strength?: number })
+
+Phaser → UI (state updates)
+- `current-scene-ready` (scene: Phaser.Scene)
+- `score-updated` (score: number)
+- `spacebucks-updated` (total: number)
+- `tether-state-changed` (active: boolean)
+- `minimap-state-changed` (visible: boolean)
+- `game-pause-changed` (paused: boolean)
+- `player-exit-zone-changed` (eligible: boolean)
+
+Enforcement:
+- When introducing a new UI intent or scene update, add it to `src/game/EventBus.ts` JSDoc immediately with payload shape.
+- Prefer adding shared types (future task) but do not ship untyped `any` payloads.
+
+## React UI Guidelines
+
+- Use `PhaserGame` as the only bridge; never reach into Phaser directly from other components.
+- Emit UI intents via `EventBus` from hooks (e.g., `useGameState`) with no scene gating. Example: `EventBus.emit('ui-tether-toggle')`.
+- Subscribe to Phaser→UI events in `useEffect` and clean up in the return function using `EventBus.off(event, handler)`.
+- Keep React for UI only. Do not mirror Phaser visuals in React. Do not manipulate the Phaser canvas from React.
+- Touch input belongs to React (`TouchControls`); desktop inputs (keyboard/mouse) remain in Phaser.
+
+### Modular organization by scene (required)
+- Place scene-specific UI under `src/components/game-ui/scenes/<SceneName>/`.
+- Provide a local `index.ts` barrel in each scene folder to simplify imports.
+- Optional: create `src/components/game-ui/hooks/scenes/use<SceneName>.ts` for scene-only UI logic.
+- Optional: place styles in `src/styles/scenes/<scene>.module.css` to keep scope clear.
+- When adding a new UI intent for a scene, update `EventBus.ts` JSDoc and prefer reusing canonicals.
+
+## Phaser Scene Guidelines
+
+- Add EventBus listeners once per scene lifecycle in `create()` and remove them in `shutdown()` using stored handler refs.
+- Emit `current-scene-ready` once at the end of `create()`.
+- Do not draw UI in Phaser (no buttons/instructions). Emit state and let React render.
+- Keep desktop inputs in Phaser (keyboard, right-click tether) and ensure no conflicts with React events.
+- Emit updates for HUD (`score-updated`, `spacebucks-updated`) instead of changing Phaser text objects.
+ - Use stored handler refs for EventBus; add listeners in `create()`, remove in `shutdown()`.
+
+## Asset & Preload
+
+- Do not preload React-only UI assets (touch buttons/joystick images) in Phaser preloader.
+
+## Acceptance Checklist (for new UI)
+
+- React emits only canonical UI→Phaser events and cleans up listeners.
+- Phaser scene registers once, cleans up on `shutdown`, emits `current-scene-ready` once.
+- No duplicated UI between Phaser and React.
+- Mobile: `TouchControls` drive thrust/rotation/tether via EventBus; desktop inputs unchanged.
+
+## Examples
+
+React emit (no gating):
+```ts
+EventBus.emit('ui-thrust-control', { active: true, force: 60 });
+```
+
+Scene listener with cleanup:
+```ts
+this.onUiThrust = (p: { active: boolean; force?: number }) => { /* ... */ };
+EventBus.on('ui-thrust-control', this.onUiThrust);
+// in shutdown()
+if (this.onUiThrust) EventBus.off('ui-thrust-control', this.onUiThrust);
+```
+
+
+
 
 # React-Phaser Bridge Rules
 

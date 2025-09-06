@@ -3,6 +3,7 @@ import { EventBus } from '../EventBus';
 
 export default class MainMenuScene extends Phaser.Scene {
     private music!: Phaser.Sound.BaseSound;
+    private onStartGame?: () => void;
 
     constructor() {
         super('MainMenuScene');
@@ -37,53 +38,16 @@ export default class MainMenuScene extends Phaser.Scene {
             }
         });
 
-        // Add background and logo first
-        this.add.image(width / 2, height / 2, 'bootBackground');
-        const AstroHaulerLogo = this.add.image(width / 2, height / 2, 'AstroHaulerLogo')
-            .setOrigin(0, 1)
-            .setScale(0.5);
-
-        // Add wanderers logo
-        const wanderersLogo = this.add.image(width/2, height/2, 'wanderers_white')
-            .setOrigin(-1.55, -0.8)
-            .setScale(0.1);
-            
-        // Add plus sign between logos
-        const plusSign = this.add.text(width / 2, height/2, '+', { 
-            font: '72px Arial', 
-            color: '#ffffff' 
-        }).setOrigin(-17.5, -4.5);
-        
-        const logo = this.add.image(width / 2, height - 75, 'bootLogo') // Positioned 50px from bottom
-            .setOrigin(-1.1, .5) // Set origin to bottom-center
-            .setScale(0.25); // Scale it down
+        // Background and logos are now handled by React overlay (MainMenu)
 
 
-        // Start Button
-        const startButton = this.add.text(width * .5, height * 0.7, '[ Start Game ]', {
-            font: '72px monospace',
-            color: '#f800ea',
-            align: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            padding: { left: 100, right: 100, top: 50, bottom: 50 }
-        })
-        .setOrigin(0.5)
-        .setInteractive();
-
-        startButton.on('pointerdown', () => {
-            console.log('Start button clicked - Starting CommandCenterScene');
-            // Stop this scene when transitioning to ensure shutdown is called
+        // Listen for React intent to start the game
+        this.onStartGame = () => {
+            console.log('ui-start-game received - Starting CommandCenterScene');
             this.scene.start('CommandCenterScene');
             this.scene.stop('MainMenuScene');
-        });
-        
-        startButton.on('pointerover', () => {
-            startButton.setStyle({ backgroundColor: 'rgba(238, 0, 255, 0.37)' });
-        });
-        
-        startButton.on('pointerout', () => {
-            startButton.setStyle({ backgroundColor: 'rgba(0, 0, 0, 0.5)' });
-        });
+        };
+        EventBus.on('ui-start-game', this.onStartGame);
 
         // Version text at bottom right
         this.add.text(width - 10, height - 10, 'v0.3.0 - Command Center Update', { 
@@ -94,5 +58,12 @@ export default class MainMenuScene extends Phaser.Scene {
 
         // Emit the ready event for React bridge
         EventBus.emit('current-scene-ready', this);
+    }
+
+    shutdown() {
+        if (this.onStartGame) {
+            EventBus.off('ui-start-game', this.onStartGame);
+            this.onStartGame = undefined;
+        }
     }
 } 

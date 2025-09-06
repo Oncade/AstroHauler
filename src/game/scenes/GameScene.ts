@@ -21,6 +21,7 @@ import {
 import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
 import Minimap from '../objects/Minimap';
 import FogOfWar from '../objects/FogOfWar';
+import CameraController from '../objects/CameraController';
 
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
@@ -30,8 +31,8 @@ export default class GameScene extends Phaser.Scene {
     private depositZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private exitZone!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private hasPlayerLeftExitZone: boolean = false;
+    private isPlayerEligibleToExit: boolean = false;
 
-    private scoreText!: Phaser.GameObjects.Text;
     private score: number = 0;
     private totalSpaceBucks: number = 0;
     private music!: Phaser.Sound.BaseSound;
@@ -56,16 +57,12 @@ export default class GameScene extends Phaser.Scene {
 
     // Minimap
     private minimap?: Minimap;
-    private minimapButtonContainer?: Phaser.GameObjects.Container;
-    private minimapButtonIcon?: Phaser.GameObjects.Graphics;
+    // Minimap button removed; React controls visibility
     private worldWidth: number = 0;
     private worldHeight: number = 0;
     private isPausedForMinimap: boolean = false;
     
-    // UI Buttons
-    private exitButtonContainer?: Phaser.GameObjects.Container;
-    private helpButtonContainer?: Phaser.GameObjects.Container;
-    private showInstructions: boolean = false;
+    // Phaser UI buttons removed; React owns buttons and instructions
 
     // Fog of War
     private fogOfWar?: FogOfWar;
@@ -79,6 +76,16 @@ export default class GameScene extends Phaser.Scene {
     private isMobileDevice: boolean = false;
     private deviceMultiplier: number = 1.0;
     private screenOrientation: 'portrait' | 'landscape' = 'landscape';
+
+    // Camera controller for smooth zoom and pinch
+    private cameraController?: CameraController;
+
+    // Cached UI listener refs for cleanup
+    private onUiEndHaul?: () => void;
+    private onUiMinimapToggle?: (show: boolean) => void;
+    private onUiTetherToggle?: () => void;
+    private onUiThrustControl?: (payload: { active: boolean; force?: number }) => void;
+    private onUiRotationControl?: (payload: { angle: number; strength?: number }) => void;
 
     constructor() {
         super('GameScene');
@@ -121,6 +128,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Load persisted total SpaceBucks from meta progress
         this.loadTotalSpaceBucks();
+        // Inform React HUD immediately
+        EventBus.emit('spacebucks-updated', this.totalSpaceBucks);
         
         // Reset current haul score on scene start
         this.score = 0;
@@ -231,10 +240,8 @@ export default class GameScene extends Phaser.Scene {
             // this.keys remains {} which is safe
         }
 
-        // Setup Touch Controls if on a touch device
-        if (this.isTouchDevice) {
-            this.createTouchControls();
-        } else {
+        // No Phaser touch UI; React TouchControls emits via EventBus
+        if (!this.isTouchDevice) {
             // Desktop mouse setup
             // Prevent context menu so right-click can be used for tether toggle
             this.input.mouse?.disableContextMenu();
@@ -291,15 +298,6 @@ export default class GameScene extends Phaser.Scene {
         );
 /*
         // UI Elements
-        this.scoreText = this.add.text(16, 16, 'Score: 0', {
-            fontFamily: '"Roboto Mono", "Courier New", monospace',
-            fontSize: '32px',
-            color: '#fff',
-            // fixedWidth: 300 // Optional for alignment
-        }).setScrollFactor(0); // Keep UI fixed on screen
-
-        // Update Phaser score text after reset
-        this.scoreText.setText('Score: ' + this.score);
 */
         // UI buttons will be created after minimap setup
 
@@ -318,10 +316,19 @@ export default class GameScene extends Phaser.Scene {
         
         console.log(`Camera setup: Zoom: ${cameraZoom}, Follow Speed: ${cameraFollowSpeed}`);
 
+        // Initialize smooth zoom controller (wheel + pinch)
+        this.cameraController = new CameraController(this, this.cameras.main, {
+            initialZoom: cameraZoom,
+            minZoom: this.isMobileDevice ? 0.7 : 0.6,
+            maxZoom: this.isMobileDevice ? 1.6 : 2.0,
+            wheelSensitivity: 0.0012,
+            smoothFactor: 6
+        });
+
         // Listen for orientation changes
         this.scale.on('resize', this.handleScreenResize, this);
 
-        // Emit the ready event for React bridge
+        // Emit the ready event for React bridge (single emit is sufficient)
         EventBus.emit('current-scene-ready', this);
 
         // Update all salvage objects to check for deposit zone overlap - safely
@@ -371,11 +378,10 @@ export default class GameScene extends Phaser.Scene {
         });
         this.minimap.start(this.player, this.parentShip, this.salvageGroup);
 
-        // Create minimap toggle button (starts hidden state)
-        this.createMinimapButton();
+        // Minimap button and UI buttons removed (React owns UI)
         
-        // Create UI buttons (Exit, Help) positioned in upper right corner
-        this.createUIButtons();
+        // Setup React UI event listeners
+        this.setupReactUIEventListeners();
         
         // Touch debugging completed - coordinates work correctly
     }
@@ -421,71 +427,10 @@ export default class GameScene extends Phaser.Scene {
         // Resize/rebuild minimap for new screen size
         this.minimap?.handleResize(this.isMobileDevice);
 
-        // Reposition UI buttons
-        this.positionUIButtons();
-        this.positionMinimapButton();
+        // No Phaser UI to reposition
     }
 
-    // --- Minimap --- (now handled by Minimap class)
-    private createMinimapButton() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        const posX = width - size - margin;
-        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
-
-        this.minimapButtonContainer = this.add.container(posX, posY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
-
-        // Button background
-        const bg = this.add.graphics();
-        bg.fillStyle(0x0b0b12, 0.85);
-        bg.fillRoundedRect(0, 0, size, size, 12);
-        bg.lineStyle(2, 0x00ffcc, 0.7);
-        bg.strokeRoundedRect(0, 0, size, size, 12);
-        this.minimapButtonContainer.add(bg);
-
-        // Icon: stylized radar/map glyph
-        this.minimapButtonIcon = this.add.graphics();
-        const cx = size / 2;
-        const cy = size / 2;
-        const r = size * 0.32;
-        this.minimapButtonIcon.lineStyle(3, 0x00ff88, 1);
-        this.minimapButtonIcon.strokeCircle(cx, cy, r);
-        this.minimapButtonIcon.lineStyle(2, 0x00ffaa, 0.9);
-        this.minimapButtonIcon.beginPath();
-        this.minimapButtonIcon.moveTo(cx, cy);
-        this.minimapButtonIcon.lineTo(cx + r, cy - r * 0.2);
-        this.minimapButtonIcon.strokePath();
-        // grid hint
-        this.minimapButtonIcon.lineStyle(1, 0x00ffcc, 0.6);
-        this.minimapButtonIcon.strokeRect(cx - r * 0.8, cy - r * 0.8, r * 1.6, r * 1.6);
-        this.minimapButtonContainer.add(this.minimapButtonIcon);
-
-        // Hover/press feedback
-        this.minimapButtonContainer.on('pointerover', () => bg.setAlpha(1));
-        this.minimapButtonContainer.on('pointerout', () => bg.setAlpha(0.85));
-        this.minimapButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.minimapButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            const visible = this.minimap?.toggle();
-            if (visible !== undefined) {
-                this.setPausedForMinimap(visible);
-            }
-        });
-    }
-
-    private positionMinimapButton() {
-        if (!this.minimapButtonContainer) return;
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        const posX = width - size - margin;
-        const posY = margin + size * 2 + 10; // Position below Exit and Help buttons
-        this.minimapButtonContainer.setPosition(posX, posY);
-    }
+    // Minimap button removed; React toggles via EventBus
 
     private setPausedForMinimap(paused: boolean) {
         this.isPausedForMinimap = paused;
@@ -493,191 +438,90 @@ export default class GameScene extends Phaser.Scene {
         this.physics.world.isPaused = paused;
         this.tweens.timeScale = paused ? 0 : 1;
         // Optionally dim player thruster sound etc. (not implemented)
+        EventBus.emit('game-pause-changed', paused);
     }
 
-    // Create UI buttons (Exit, Help) in upper right corner
-    private createUIButtons() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        
-        // Exit button - top right
-        const exitPosX = width - size - margin;
-        const exitPosY = margin;
-        
-        this.exitButtonContainer = this.add.container(exitPosX, exitPosY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
+    // Phaser-created UI buttons removed; React handles UI
 
-        // Exit button background
-        const exitBg = this.add.graphics();
-        exitBg.fillStyle(0x330000, 0.85);
-        exitBg.fillRoundedRect(0, 0, size, size, 12);
-        exitBg.lineStyle(2, 0xff3300, 0.8);
-        exitBg.strokeRoundedRect(0, 0, size, size, 12);
-        this.exitButtonContainer.add(exitBg);
+    // Setup event listeners for React UI components
+    private setupReactUIEventListeners() {
+        this.onUiEndHaul = () => { this.endHaul(); };
+        EventBus.on('ui-end-haul', this.onUiEndHaul);
 
-        // Exit button text
-        const exitText = this.add.text(size / 2, size / 2, 'EXIT', {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#ff3300',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.exitButtonContainer.add(exitText);
+        // Minimap toggle from React UI
+        this.onUiMinimapToggle = (show: boolean) => {
+            if (!this.minimap) return;
+            if (show) {
+                this.minimap.show();
+            } else {
+                this.minimap.hide();
+            }
+            this.setPausedForMinimap(show);
+            // Inform React of final minimap visibility state
+            EventBus.emit('minimap-state-changed', this.minimap.isVisible());
+        };
+        EventBus.on('ui-minimap-toggle', this.onUiMinimapToggle);
 
-        // Help button - below exit button
-        const helpPosX = width - size - margin;
-        const helpPosY = margin + size + 10;
-        
-        this.helpButtonContainer = this.add.container(helpPosX, helpPosY)
-            .setScrollFactor(0)
-            .setDepth(1200)
-            .setSize(size, size)
-            .setInteractive(new Phaser.Geom.Rectangle(0, 0, size, size), Phaser.Geom.Rectangle.Contains);
+        // Tether toggle from React UI
+        this.onUiTetherToggle = () => {
+            if (this.activeTether) {
+                console.log('Tether toggle: activeTether exists');
+                // Allow active tether to handle press first (e.g., bond add or reattach)
+                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
+                    const handled = this.activeTether.onTetherButtonPressed();
+                    if (handled) {
+                        console.log('Tether toggle: activeTether handled');
+                        EventBus.emit('tether-state-changed', true);
+                        return;
+                    }
+                }
+                console.log('Tether toggle: activeTether not handled');
+                // If not handled, default to release
+                this.activeTether.destroy();
+                this.activeTether = null;
+                EventBus.emit('tether-state-changed', false);
+            } else {
+                console.log('Tether toggle: no activeTether');
+                // If not tethered, try to attach to nearest salvage
+                this.attemptTetherAttach();
+                EventBus.emit('tether-state-changed', !!this.activeTether);
+            }
+        };
+        EventBus.on('ui-tether-toggle', this.onUiTetherToggle);
 
-        // Help button background
-        const helpBg = this.add.graphics();
-        helpBg.fillStyle(0x003300, 0.85);
-        helpBg.fillRoundedRect(0, 0, size, size, 12);
-        helpBg.lineStyle(2, 0x00ff00, 0.7);
-        helpBg.strokeRoundedRect(0, 0, size, size, 12);
-        this.helpButtonContainer.add(helpBg);
+        // Thrust control from React UI
+        this.onUiThrustControl = (payload: { active: boolean; force?: number }) => {
+            if (!payload) return;
+            const { active, force } = payload;
+            if (active) {
+                this.isThrustButtonPressed = true;
+                if (typeof force === 'number') {
+                    this.currentThrustForce = force;
+                }
+            } else {
+                this.stopThrust();
+            }
+        };
+        EventBus.on('ui-thrust-control', this.onUiThrustControl);
 
-        // Help button text
-        const helpText = this.add.text(size / 2, size / 2, 'HELP', {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#00ff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.helpButtonContainer.add(helpText);
-
-        // Exit button events
-        this.exitButtonContainer.on('pointerover', () => exitBg.setAlpha(1));
-        this.exitButtonContainer.on('pointerout', () => exitBg.setAlpha(0.85));
-        this.exitButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.exitButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            this.endHaul();
-        });
-
-        // Help button events
-        this.helpButtonContainer.on('pointerover', () => helpBg.setAlpha(1));
-        this.helpButtonContainer.on('pointerout', () => helpBg.setAlpha(0.85));
-        this.helpButtonContainer.on('pointerdown', () => {
-            this.tweens.add({ targets: this.helpButtonContainer, scale: 0.95, duration: 80, yoyo: true });
-            this.toggleInstructions();
-        });
+        // Rotation control from React UI
+        this.onUiRotationControl = (payload: { angle: number; strength?: number }) => {
+            if (!payload || !this.player) return;
+            const { angle, strength } = payload;
+            // If strength provided, rotate smoothly; otherwise snap to angle
+            if (typeof strength === 'number') {
+                this.rotateShipTowards(angle, 16, strength);
+            } else {
+                this.player.setRotation(angle);
+                this.player.setAngularVelocity(0);
+            }
+        };
+        EventBus.on('ui-rotation-control', this.onUiRotationControl);
     }
 
-    // Position UI buttons for screen resize
-    private positionUIButtons() {
-        const { width } = this.scale;
-        const size = this.isMobileDevice ? 64 : 56;
-        const margin = 14;
-        
-        if (this.exitButtonContainer) {
-            const exitPosX = width - size - margin;
-            const exitPosY = margin;
-            this.exitButtonContainer.setPosition(exitPosX, exitPosY);
-        }
-        
-        if (this.helpButtonContainer) {
-            const helpPosX = width - size - margin;
-            const helpPosY = margin + size + 10;
-            this.helpButtonContainer.setPosition(helpPosX, helpPosY);
-        }
-    }
+    // No Phaser UI to reposition
 
-    // Toggle instructions display
-    private toggleInstructions() {
-        this.showInstructions = !this.showInstructions;
-        
-        if (this.showInstructions) {
-            this.showInstructionsPanel();
-        } else {
-            this.hideInstructionsPanel();
-        }
-    }
-
-    // Show instructions panel
-    private showInstructionsPanel() {
-        // Remove existing panel if it exists
-        this.hideInstructionsPanel();
-        
-        const { width, height } = this.scale;
-        const panelWidth = this.isMobileDevice ? Math.min(width * 0.9, 400) : 400;
-        const panelHeight = this.isMobileDevice ? Math.min(height * 0.7, 500) : 500;
-        const panelX = width - panelWidth - 20;
-        const panelY = 80;
-        
-        // Create instructions panel container
-        const instructionsContainer = this.add.container(panelX, panelY)
-            .setScrollFactor(0)
-            .setDepth(1300)
-            .setName('instructionsPanel');
-        
-        // Panel background
-        const panelBg = this.add.graphics();
-        panelBg.fillStyle(0x000000, 0.95);
-        panelBg.fillRoundedRect(0, 0, panelWidth, panelHeight, 12);
-        panelBg.lineStyle(2, 0x00ff00, 0.8);
-        panelBg.strokeRoundedRect(0, 0, panelWidth, panelHeight, 12);
-        instructionsContainer.add(panelBg);
-        
-        // Title
-        const title = this.add.text(panelWidth / 2, 30, 'GAME INSTRUCTIONS', {
-            fontSize: this.isMobileDevice ? '18px' : '20px',
-            color: '#00ff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        instructionsContainer.add(title);
-        
-        // Instructions text
-        const controlsText = this.isMobileDevice 
-            ? 'CONTROLS:\n• Hold thrust button to move\n• Use joystick to rotate\n• Tap tether button to grab salvage'
-            : 'CONTROLS:\n• W/Up - Thrust forward\n• A/D or Arrow keys - Rotate\n• Space - Tether/Release salvage';
-            
-        const instructions = this.add.text(20, 70, 
-            `${controlsText}\n\nHOW TO COLLECT SPACEBUCKS:\n• Salvage auto-collects in GREEN ZONE\n• Tether salvage to drag it\n• Move salvage into deposit zone\n• Watch for "DEPOSIT SUCCESS!"\n\nEND HAUL:\n• Fly into RED EXIT ZONE\n• Your SpaceBucks are saved\n• Return to base for upgrades`, {
-            fontSize: this.isMobileDevice ? '12px' : '14px',
-            color: '#ffffff',
-            fontFamily: 'Arial, sans-serif',
-            wordWrap: { width: panelWidth - 40 },
-            lineSpacing: 4
-        });
-        instructionsContainer.add(instructions);
-        
-        // Close button
-        const closeButton = this.add.text(panelWidth / 2, panelHeight - 30, '[ CLOSE ]', {
-            fontSize: this.isMobileDevice ? '14px' : '16px',
-            color: '#ffff00',
-            fontFamily: 'Arial, sans-serif',
-            fontStyle: 'bold',
-            backgroundColor: '#333333',
-            padding: { left: 10, right: 10, top: 5, bottom: 5 }
-        }).setOrigin(0.5).setInteractive();
-        
-        closeButton.on('pointerdown', () => {
-            this.hideInstructionsPanel();
-            this.showInstructions = false;
-        });
-        closeButton.on('pointerover', () => closeButton.setStyle({ backgroundColor: '#555555' }));
-        closeButton.on('pointerout', () => closeButton.setStyle({ backgroundColor: '#333333' }));
-        
-        instructionsContainer.add(closeButton);
-    }
-
-    // Hide instructions panel
-    private hideInstructionsPanel() {
-        const existingPanel = this.children.getByName('instructionsPanel');
-        if (existingPanel) {
-            existingPanel.destroy();
-        }
-    }
+    // Instructions panel removed; React owns this UI
 
     // Touch coordinate debugging completed - system works correctly
 
@@ -847,6 +691,9 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             // Don't create joystick if it's already active
             if (joystickPointerId !== null) return;
+            // Avoid creating joystick when doing a two-finger pinch gesture
+            const activeDown = this.input.manager.pointers.filter((p: Phaser.Input.Pointer) => p.isDown).length;
+            if (activeDown >= 2) return;
             
             // Get the actual position considering camera zoom
             const adjustedPosition = this.getCorrectedPointerPosition(pointer);
@@ -935,18 +782,10 @@ export default class GameScene extends Phaser.Scene {
     // Helper method to get world coordinates for game world interactions
     // This is for interacting with game objects that are affected by camera zoom
     getWorldPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
-        // Get camera zoom level
-        const zoom = this.cameras.main.zoom;
-        
-        // Get camera scroll position
-        const scrollX = this.cameras.main.scrollX;
-        const scrollY = this.cameras.main.scrollY;
-        
-        // Convert screen coordinates to world coordinates
-        const worldX = pointer.x / zoom + scrollX;
-        const worldY = pointer.y / zoom + scrollY;
-        
-        return { x: worldX, y: worldY };
+        // Use Phaser camera transform for accurate mapping under all zoom/pan states
+        const out = new Phaser.Math.Vector2();
+        this.cameras.main.getWorldPoint(pointer.x, pointer.y, out);
+        return { x: out.x, y: out.y };
     }
 
     // Build a tilemap collision layer from the alpha channel of the debris map image
@@ -1154,6 +993,8 @@ export default class GameScene extends Phaser.Scene {
         if (this.isPausedForMinimap) {
             return;
         }
+        // Smooth camera zoom update
+        this.cameraController?.update(delta);
         // --- Handle Input ---
         // Handle rotation
         if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
@@ -1479,9 +1320,6 @@ export default class GameScene extends Phaser.Scene {
         
         // Check if scene is still active before updating UI
         if (this.scene.isActive()) {
-            if (this.scoreText && this.scoreText.active) {
-                this.scoreText.setText('Score: ' + this.score);
-            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1575,9 +1413,6 @@ export default class GameScene extends Phaser.Scene {
         
         // Safely update UI only if scene is still active
         if (this.scene.isActive()) {
-            if (this.scoreText && this.scoreText.active) {
-                this.scoreText.setText('Score: ' + this.score);
-            }
             EventBus.emit('score-updated', this.score);
             console.log(`Scene: Deposit successful! Score: ${this.score}`);
         }
@@ -1617,21 +1452,23 @@ export default class GameScene extends Phaser.Scene {
         // Persist SpaceBucks via meta system
         addSpaceBucks(this.score);
         const updatedTotal = loadMetaProgress().totalSpaceBucks;
+        // Inform React about new total immediately
+        EventBus.emit('spacebucks-updated', updatedTotal);
 
         // Clean up tether before changing scene
         if (this.activeTether) {
             this.activeTether.destroy();
             this.activeTether = null;
         }
-        
-        // Pass both current score and total to GameOverScene
-        this.scene.start('GameOverScene', { 
-            score: this.score,
-            totalSpaceBucks: updatedTotal
+        // Pass both current score and total to GameOverScene inside Phaser's update cycle
+        this.time.delayedCall(0, () => {
+            this.scene.start('GameOverScene', { 
+                score: this.score,
+                totalSpaceBucks: updatedTotal
+            });
+            // Explicitly stop this scene to ensure shutdown is called
+            this.scene.stop('GameScene');
         });
-        
-        // Explicitly stop this scene to ensure shutdown is called
-        this.scene.stop('GameScene');
     }
     
     // Create the exit zone for ending the current haul
@@ -1726,135 +1563,32 @@ export default class GameScene extends Phaser.Scene {
             console.log('Player left exit zone, making it visible');
         }
         
-        // Get reference to existing prompt if it exists
-        const exitPrompt = this.children.getByName('exitPrompt');
-        
+        // Determine exit eligibility: inside zone, has left once, nearly stopped
+        let eligible = false;
         if (boundsOverlap && this.hasPlayerLeftExitZone) {
-            // Only show exit zone functionality after player has left it once and returned
-            // Check player's velocity to see if they're almost stopped
             const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
             const velocityMagnitude = Math.sqrt(
                 playerBody.velocity.x * playerBody.velocity.x + 
                 playerBody.velocity.y * playerBody.velocity.y
             );
-            
-            // Only show prompt if velocity is below threshold (almost stopped)
-            const velocityThreshold = 50; // Adjust this value as needed
-            
-            if (velocityMagnitude <= velocityThreshold) {
-                // Player is in exit zone and almost stopped, show the prompt
-                if (!exitPrompt) {
-                    this.showExitPrompt();
-                }
-            } else if (exitPrompt) {
-                // Player is moving too fast, hide prompt if visible
-                this.hideExitPrompt();
-            }
-        } else if (exitPrompt) {
-            // Player has left the exit zone while prompt was visible, hide it
-            this.hideExitPrompt();
+            const velocityThreshold = 50;
+            eligible = velocityMagnitude <= velocityThreshold;
+        }
+
+        if (eligible !== this.isPlayerEligibleToExit) {
+            this.isPlayerEligibleToExit = eligible;
+            EventBus.emit('player-exit-zone-changed', eligible);
         }
     }
     
-    // Show exit confirmation when player enters exit zone
-    showExitPrompt() {
-        // Check if prompt already exists to prevent duplicates
-        if (this.children.getByName('exitPrompt')) return;
-        
-        const { width, height } = this.scale;
-        
-        // Create prompt container
-        this.add.rectangle(
-            width / 2, 
-            height / 2, 
-            400, 
-            200, 
-            0x000000, 
-            0.8
-        ).setScrollFactor(0).setDepth(1000).setName('exitPrompt');
-        
-        this.add.text(
-            width / 2, 
-            height / 2 - 40, 
-            'End this haul and return to base?', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#ffffff',
-                align: 'center'
-            }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setName('exitPromptText');
-        
-        const confirmButton = this.add.text(
-            width / 2 - 80, 
-            height / 2 + 30, 
-            '[ Yes ]', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#00ff00',
-                backgroundColor: '#333333',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 }
-            }
-        ).setOrigin(0.5)
-         .setScrollFactor(0)
-         .setDepth(1001)
-         .setInteractive()
-         .setName('exitPromptYesBtn');
-        
-        const cancelButton = this.add.text(
-            width / 2 + 80, 
-            height / 2 + 30, 
-            '[ No ]', 
-            {
-                fontFamily: '"Roboto Mono", "Courier New", monospace',
-                fontSize: '24px',
-                color: '#ff0000',
-                backgroundColor: '#333333',
-                padding: { left: 10, right: 10, top: 5, bottom: 5 }
-            }
-        ).setOrigin(0.5)
-         .setScrollFactor(0)
-         .setDepth(1001)
-         .setInteractive()
-         .setName('exitPromptNoBtn');
-        
-        // Button event handlers
-        confirmButton.on('pointerdown', () => {
-            this.endHaul();
-        });
-        
-        cancelButton.on('pointerdown', () => {
-            // Remove the prompt elements
-            this.hideExitPrompt();
-        });
-        
-        // Add hover effects
-        confirmButton.on('pointerover', () => confirmButton.setStyle({ backgroundColor: '#007700' }));
-        confirmButton.on('pointerout', () => confirmButton.setStyle({ backgroundColor: '#333333' }));
-        
-        cancelButton.on('pointerover', () => cancelButton.setStyle({ backgroundColor: '#770000' }));
-        cancelButton.on('pointerout', () => cancelButton.setStyle({ backgroundColor: '#333333' }));
-    }
-
-    // Hide the exit prompt when player leaves the exit zone
-    hideExitPrompt() {
-        const promptBg = this.children.getByName('exitPrompt');
-        const promptText = this.children.getByName('exitPromptText');
-        const confirmButton = this.children.getByName('exitPromptYesBtn');
-        const cancelButton = this.children.getByName('exitPromptNoBtn');
-        
-        // Destroy all prompt elements if they exist
-        if (promptBg) promptBg.destroy();
-        if (promptText) promptText.destroy();
-        if (confirmButton) confirmButton.destroy();
-        if (cancelButton) cancelButton.destroy();
-    }
+    // Legacy exit prompt removed; React controls the prompt via EventBus
 
     // Helper method to stop thrust and reset values
     stopThrust() {
         this.isThrustButtonPressed = false;
-        this.thrustButton.setTint(TouchControlsConfig.colors.normal);
+        if (this.thrustButton && this.thrustButton.active) {
+            this.thrustButton.setTint(TouchControlsConfig.colors.normal);
+        }
         
         // Stop the thrust ramp-up tween
         if (this.thrustTween) {
@@ -1870,6 +1604,11 @@ export default class GameScene extends Phaser.Scene {
 
     // Clean up resources when scene is shut down
     shutdown() {
+        // Destroy camera controller and input hooks
+        if (this.cameraController) {
+            this.cameraController.destroy();
+            this.cameraController = undefined;
+        }
         // Clean up tweens
         if (this.joystickFadeTween) {
             this.joystickFadeTween.stop();
@@ -1894,6 +1633,13 @@ export default class GameScene extends Phaser.Scene {
         
         // Remove the resize event listener
         this.scale.off('resize', this.handleScreenResize, this);
+
+        // Clean up EventBus listeners
+        if (this.onUiEndHaul) EventBus.off('ui-end-haul', this.onUiEndHaul);
+        if (this.onUiMinimapToggle) EventBus.off('ui-minimap-toggle', this.onUiMinimapToggle);
+        if (this.onUiTetherToggle) EventBus.off('ui-tether-toggle', this.onUiTetherToggle);
+        if (this.onUiThrustControl) EventBus.off('ui-thrust-control', this.onUiThrustControl);
+        if (this.onUiRotationControl) EventBus.off('ui-rotation-control', this.onUiRotationControl);
     }
 
     // Helper method to select and play random background music
