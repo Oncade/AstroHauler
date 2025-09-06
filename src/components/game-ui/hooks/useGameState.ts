@@ -6,7 +6,6 @@ export interface GameUIState {
   totalSpaceBucks: number;
   showInstructions: boolean;
   showExitPrompt: boolean;
-  showMinimap: boolean;
   isPaused: boolean;
   gameScene: Phaser.Scene | null;
   tetherActive: boolean;
@@ -27,7 +26,6 @@ export const useGameState = () => {
     totalSpaceBucks: 0,
     showInstructions: false,
     showExitPrompt: false,
-    showMinimap: false,
     isPaused: false,
     gameScene: null,
     tetherActive: false,
@@ -53,16 +51,6 @@ export const useGameState = () => {
   const setExitPrompt = useCallback((show: boolean) => {
     setGameState(prev => ({ ...prev, showExitPrompt: show }));
   }, []);
-
-  // Toggle minimap
-  const toggleMinimap = useCallback(() => {
-    setGameState(prev => ({ ...prev, showMinimap: !prev.showMinimap }));
-    
-    // Notify Phaser scene about minimap toggle
-    if (gameState.gameScene) {
-      EventBus.emit('ui-minimap-toggle', !gameState.showMinimap);
-    }
-  }, [gameState.gameScene, gameState.showMinimap]);
 
   // Set pause state
   const setPaused = useCallback((paused: boolean) => {
@@ -121,10 +109,6 @@ export const useGameState = () => {
       setPlayerInExitZone(inZone);
     };
 
-    const handleMinimapStateChange = (visible: boolean) => {
-      setGameState(prev => ({ ...prev, showMinimap: visible }));
-    };
-
     const handlePauseStateChange = (paused: boolean) => {
       setPaused(paused);
     };
@@ -135,7 +119,6 @@ export const useGameState = () => {
     EventBus.on('current-scene-ready', handleSceneReady);
     EventBus.on('tether-state-changed', handleTetherStateChange);
     EventBus.on('player-exit-zone-changed', handleExitZoneChange);
-    EventBus.on('minimap-state-changed', handleMinimapStateChange);
     EventBus.on('game-pause-changed', handlePauseStateChange);
 
     // Cleanup
@@ -145,7 +128,6 @@ export const useGameState = () => {
       EventBus.removeListener('current-scene-ready', handleSceneReady);
       EventBus.removeListener('tether-state-changed', handleTetherStateChange);
       EventBus.removeListener('player-exit-zone-changed', handleExitZoneChange);
-      EventBus.removeListener('minimap-state-changed', handleMinimapStateChange);
       EventBus.removeListener('game-pause-changed', handlePauseStateChange);
     };
   }, [updateScore, updateTotalSpaceBucks, setTetherActive, setPlayerInExitZone, setPaused]);
@@ -157,7 +139,6 @@ export const useGameState = () => {
       updateTotalSpaceBucks,
       toggleInstructions,
       setExitPrompt,
-      toggleMinimap,
       setPaused,
       setTetherActive,
       setPlayerInExitZone,

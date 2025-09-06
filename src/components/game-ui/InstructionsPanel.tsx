@@ -54,7 +54,6 @@ export const InstructionsPanel: React.FC = () => {
 
         <div className={styles.modalText}>
           <strong>TIPS:</strong><br />
-          • Use the minimap (MAP button) to navigate<br />
           • Larger salvage pieces are worth more SpaceBucks<br />
           • Plan your route to collect efficiently<br />
           • Watch your momentum - space physics apply!<br />

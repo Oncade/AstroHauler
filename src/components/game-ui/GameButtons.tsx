@@ -20,10 +20,6 @@ export const GameButtons: React.FC<GameButtonsProps> = ({ className = '' }) => {
     actions.toggleInstructions();
   };
 
-  const handleMinimapClick = () => {
-    actions.toggleMinimap();
-  };
-
   const buttonStyle = {
     transition: getTransition('all', 150),
   };
@@ -52,16 +48,6 @@ export const GameButtons: React.FC<GameButtonsProps> = ({ className = '' }) => {
         HELP
       </button>
 
-      {/* Minimap Button */}
-      <button
-        className={`${styles.button} ${styles.minimapButton}`}
-        onClick={handleMinimapClick}
-        style={buttonStyle}
-        aria-label={gameState.showMinimap ? 'Hide minimap' : 'Show minimap'}
-        title="Toggle Minimap"
-      >
-        MAP
-      </button>
     </div>
   );
 };
