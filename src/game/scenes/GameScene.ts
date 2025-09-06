@@ -21,6 +21,7 @@ import {
 import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
 import Minimap from '../objects/Minimap';
 import FogOfWar from '../objects/FogOfWar';
+import CameraController from '../objects/CameraController';
 
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
@@ -75,6 +76,9 @@ export default class GameScene extends Phaser.Scene {
     private isMobileDevice: boolean = false;
     private deviceMultiplier: number = 1.0;
     private screenOrientation: 'portrait' | 'landscape' = 'landscape';
+
+    // Camera controller for smooth zoom and pinch
+    private cameraController?: CameraController;
 
     // Cached UI listener refs for cleanup
     private onUiEndHaul?: () => void;
@@ -311,6 +315,15 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setZoom(cameraZoom);
         
         console.log(`Camera setup: Zoom: ${cameraZoom}, Follow Speed: ${cameraFollowSpeed}`);
+
+        // Initialize smooth zoom controller (wheel + pinch)
+        this.cameraController = new CameraController(this, this.cameras.main, {
+            initialZoom: cameraZoom,
+            minZoom: this.isMobileDevice ? 0.7 : 0.6,
+            maxZoom: this.isMobileDevice ? 1.6 : 2.0,
+            wheelSensitivity: 0.0012,
+            smoothFactor: 6
+        });
 
         // Listen for orientation changes
         this.scale.on('resize', this.handleScreenResize, this);
@@ -678,6 +691,9 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             // Don't create joystick if it's already active
             if (joystickPointerId !== null) return;
+            // Avoid creating joystick when doing a two-finger pinch gesture
+            const activeDown = this.input.manager.pointers.filter((p: Phaser.Input.Pointer) => p.isDown).length;
+            if (activeDown >= 2) return;
             
             // Get the actual position considering camera zoom
             const adjustedPosition = this.getCorrectedPointerPosition(pointer);
@@ -766,18 +782,10 @@ export default class GameScene extends Phaser.Scene {
     // Helper method to get world coordinates for game world interactions
     // This is for interacting with game objects that are affected by camera zoom
     getWorldPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
-        // Get camera zoom level
-        const zoom = this.cameras.main.zoom;
-        
-        // Get camera scroll position
-        const scrollX = this.cameras.main.scrollX;
-        const scrollY = this.cameras.main.scrollY;
-        
-        // Convert screen coordinates to world coordinates
-        const worldX = pointer.x / zoom + scrollX;
-        const worldY = pointer.y / zoom + scrollY;
-        
-        return { x: worldX, y: worldY };
+        // Use Phaser camera transform for accurate mapping under all zoom/pan states
+        const out = new Phaser.Math.Vector2();
+        this.cameras.main.getWorldPoint(pointer.x, pointer.y, out);
+        return { x: out.x, y: out.y };
     }
 
     // Build a tilemap collision layer from the alpha channel of the debris map image
@@ -985,6 +993,8 @@ export default class GameScene extends Phaser.Scene {
         if (this.isPausedForMinimap) {
             return;
         }
+        // Smooth camera zoom update
+        this.cameraController?.update(delta);
         // --- Handle Input ---
         // Handle rotation
         if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
@@ -1594,6 +1604,11 @@ export default class GameScene extends Phaser.Scene {
 
     // Clean up resources when scene is shut down
     shutdown() {
+        // Destroy camera controller and input hooks
+        if (this.cameraController) {
+            this.cameraController.destroy();
+            this.cameraController = undefined;
+        }
         // Clean up tweens
         if (this.joystickFadeTween) {
             this.joystickFadeTween.stop();
