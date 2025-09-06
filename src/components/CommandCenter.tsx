@@ -15,7 +15,7 @@ interface CommandCenterState {
     level: { name: string; salvageSpawnCount: number };
 }
 
-const planetVideos = ['/assets/video/Planet1991.mp4', '/assets/video/Planet4626.mp4', '/assets/video/Planet8631.mp4'];
+const planetVideos = [`${import.meta.env.BASE_URL}assets/video/Planet1991.mp4`, `${import.meta.env.BASE_URL}assets/video/Planet4626.mp4`, `${import.meta.env.BASE_URL}assets/video/Planet8631.mp4`];
 
 export const CommandCenter: React.FC = () => {
     const [state, setState] = useState<CommandCenterState | null>(null);
@@ -59,7 +59,7 @@ export const CommandCenter: React.FC = () => {
 
                 <section className={`${styles.ccCard} ${styles.ccShipPanel}`} aria-labelledby="cc-ship-title">
                     <div id="cc-ship-title" className={styles.ccSectionTitle}>Ship</div>
-                    <img className={styles.ccShipArt} src="/assets/images/ship.png" alt="Selected ship" />
+                    <img className={styles.ccShipArt} src={`${import.meta.env.BASE_URL}assets/images/ship.png`} alt="Selected ship" />
                     <div className={styles.ccShipStats}>
                         <div className={styles.ccStatRow}><span>Selected</span><span>{state.selectedShipId.toUpperCase()}</span></div>
                         <div className={styles.ccStatRow}><span>Thrusters</span><span>Lv.{state.upgrades.thrusters}</span></div>
