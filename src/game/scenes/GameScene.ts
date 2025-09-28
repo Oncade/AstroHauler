@@ -19,7 +19,6 @@ import {
     WorldConfig
 } from '../config/GameConfig';
 import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress as loadMetaProgress } from '../config/MetaGame';
-import Minimap from '../objects/Minimap';
 import FogOfWar from '../objects/FogOfWar';
 import CameraController from '../objects/CameraController';
 
@@ -55,12 +54,9 @@ export default class GameScene extends Phaser.Scene {
     private joystickVisible: boolean = false;
     private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
-    // Minimap
-    private minimap?: Minimap;
-    // Minimap button removed; React controls visibility
+    
     private worldWidth: number = 0;
     private worldHeight: number = 0;
-    private isPausedForMinimap: boolean = false;
     
     // Phaser UI buttons removed; React owns buttons and instructions
 
@@ -82,7 +78,6 @@ export default class GameScene extends Phaser.Scene {
 
     // Cached UI listener refs for cleanup
     private onUiEndHaul?: () => void;
-    private onUiMinimapToggle?: (show: boolean) => void;
     private onUiTetherToggle?: () => void;
     private onUiThrustControl?: (payload: { active: boolean; force?: number }) => void;
     private onUiRotationControl?: (payload: { angle: number; strength?: number }) => void;
@@ -107,8 +102,6 @@ export default class GameScene extends Phaser.Scene {
             if (this.music && this.music.isPlaying) {
                 this.music.stop();
             }
-            // Clean up minimap resources
-            this.minimap?.destroy();
             // Clean up fog resources
             this.fogOfWar?.destroy();
         });
@@ -299,7 +292,7 @@ export default class GameScene extends Phaser.Scene {
 /*
         // UI Elements
 */
-        // UI buttons will be created after minimap setup
+        // UI buttons will be created by React UI
 
         // Camera setup with device-specific settings
         const cameraZoom = this.isMobileDevice ? 
@@ -361,24 +354,13 @@ export default class GameScene extends Phaser.Scene {
         
         // Use event to check for deposits but with safety guards
         this.events.on('update', () => {
-            if (!this.isPausedForMinimap) {
-                checkForDeposits();
-            }
+            checkForDeposits();
         });
 
         // Initialize Fog of War overlay (after world and objects are ready, before UI)
         this.fogOfWar = new FogOfWar(this, this.worldWidth, this.worldHeight);
 
-        // Create minimap overlay (after world and objects are ready)
-        this.minimap = new Minimap(this, {
-            worldWidth: this.worldWidth,
-            worldHeight: this.worldHeight,
-            hasDebrisMap: Boolean(debrisTexture && debrisWidth && debrisHeight),
-            isMobileDevice: this.isMobileDevice
-        });
-        this.minimap.start(this.player, this.parentShip, this.salvageGroup);
-
-        // Minimap button and UI buttons removed (React owns UI)
+        // Minimap removed; React owns UI
         
         // Setup React UI event listeners
         this.setupReactUIEventListeners();
@@ -424,21 +406,7 @@ export default class GameScene extends Phaser.Scene {
             console.log('Touch controls recreated for new screen size');
         }
 
-        // Resize/rebuild minimap for new screen size
-        this.minimap?.handleResize(this.isMobileDevice);
-
         // No Phaser UI to reposition
-    }
-
-    // Minimap button removed; React toggles via EventBus
-
-    private setPausedForMinimap(paused: boolean) {
-        this.isPausedForMinimap = paused;
-        // Pause/resume physics and time-based systems
-        this.physics.world.isPaused = paused;
-        this.tweens.timeScale = paused ? 0 : 1;
-        // Optionally dim player thruster sound etc. (not implemented)
-        EventBus.emit('game-pause-changed', paused);
     }
 
     // Phaser-created UI buttons removed; React handles UI
@@ -447,20 +415,6 @@ export default class GameScene extends Phaser.Scene {
     private setupReactUIEventListeners() {
         this.onUiEndHaul = () => { this.endHaul(); };
         EventBus.on('ui-end-haul', this.onUiEndHaul);
-
-        // Minimap toggle from React UI
-        this.onUiMinimapToggle = (show: boolean) => {
-            if (!this.minimap) return;
-            if (show) {
-                this.minimap.show();
-            } else {
-                this.minimap.hide();
-            }
-            this.setPausedForMinimap(show);
-            // Inform React of final minimap visibility state
-            EventBus.emit('minimap-state-changed', this.minimap.isVisible());
-        };
-        EventBus.on('ui-minimap-toggle', this.onUiMinimapToggle);
 
         // Tether toggle from React UI
         this.onUiTetherToggle = () => {
@@ -989,10 +943,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(_time: number, delta: number) {
-        // Pause gameplay simulation while minimap overlay is visible
-        if (this.isPausedForMinimap) {
-            return;
-        }
+        // Gameplay simulation proceeds normally (minimap removed)
         // Smooth camera zoom update
         this.cameraController?.update(delta);
         // --- Handle Input ---
@@ -1636,7 +1587,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Clean up EventBus listeners
         if (this.onUiEndHaul) EventBus.off('ui-end-haul', this.onUiEndHaul);
-        if (this.onUiMinimapToggle) EventBus.off('ui-minimap-toggle', this.onUiMinimapToggle);
+        
         if (this.onUiTetherToggle) EventBus.off('ui-tether-toggle', this.onUiTetherToggle);
         if (this.onUiThrustControl) EventBus.off('ui-thrust-control', this.onUiThrustControl);
         if (this.onUiRotationControl) EventBus.off('ui-rotation-control', this.onUiRotationControl);
