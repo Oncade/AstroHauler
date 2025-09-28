@@ -11,7 +11,6 @@ import {
     ParentShipConfig,
     BackgroundConfig,
     TetherConfig,
-    TouchControlsConfig,
     DeviceDetection,
     PlayerConfig,
     ResponsiveConfig,
@@ -38,21 +37,10 @@ export default class GameScene extends Phaser.Scene {
 
     private keys: { [key: string]: Phaser.Input.Keyboard.Key } = {};
     
-    // Touch controls
-    private joystick!: { outer: Phaser.GameObjects.Image; inner: Phaser.GameObjects.Image; };
-    private tetherButton!: Phaser.GameObjects.Image;
-    private thrustButton!: Phaser.GameObjects.Image;
-    private isTouching: boolean = false;
+    // Touch handled in React; keep state for thrust intent only
     private isThrustButtonPressed: boolean = false;
     private currentThrustForce: number = 0;
-    private thrustTween: Phaser.Tweens.Tween | null = null;
-    private targetRotation: number = 0;
     private isTouchDevice: boolean = false;
-    private joystickAngle: number = 0;
-    private joystickDistance: number = 0;
-    private touchDirectionIndicator!: Phaser.GameObjects.Graphics;
-    private joystickVisible: boolean = false;
-    private joystickFadeTween: Phaser.Tweens.Tween | null = null;
 
     
     private worldWidth: number = 0;
@@ -245,14 +233,8 @@ export default class GameScene extends Phaser.Scene {
                     if (this.activeTether) {
                         this.activeTether.destroy();
                         this.activeTether = null;
-                        if (this.tetherButton) {
-                            this.tetherButton.setTint(TouchControlsConfig.colors.normal);
-                        }
                     } else {
                         this.attemptTetherAttach();
-                        if (this.activeTether && this.tetherButton) {
-                            this.tetherButton.setTint(TouchControlsConfig.colors.active);
-                        }
                     }
                 }
             });
@@ -390,21 +372,6 @@ export default class GameScene extends Phaser.Scene {
             this.cameras.main.setZoom(newZoom);
             console.log(`Camera zoom adjusted to: ${newZoom}`);
         }
-        
-        // Recreate touch controls with new sizes if they exist
-        if (this.isTouchDevice && this.tetherButton && this.thrustButton) {
-            // Remove old controls
-            this.tetherButton.destroy();
-            this.thrustButton.destroy();
-            if (this.joystick) {
-                this.joystick.outer.destroy();
-                this.joystick.inner.destroy();
-            }
-            
-            // Recreate with new sizes
-            this.createTouchControls();
-            console.log('Touch controls recreated for new screen size');
-        }
 
         // No Phaser UI to reposition
     }
@@ -477,261 +444,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Instructions panel removed; React owns this UI
 
-    // Touch coordinate debugging completed - system works correctly
-
-    createTouchControls() {
-        const { width, height } = this.scale;
-        
-        // Apply responsive sizing based on device - use mobile factor for mobile devices
-        const joystickSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.joystickSize, this.isMobileDevice);
-        const buttonSize = TouchControlsConfig.getResponsiveSize(TouchControlsConfig.buttonSize, this.isMobileDevice);
-        
-        // Calculate positions for buttons - adapted for different screen sizes and orientations
-        let tetherX, tetherY, thrustX, thrustY;
-        
-        if (this.isMobileDevice) {
-            // Use percentage-based positioning for mobile devices
-            tetherX = width * TouchControlsConfig.mobilePositioning.tether.x;
-            tetherY = height * TouchControlsConfig.mobilePositioning.tether.y;
-            thrustX = width * TouchControlsConfig.mobilePositioning.thrust.x;
-            thrustY = height * TouchControlsConfig.mobilePositioning.thrust.y;
-            
-            // Log the positions for debugging
-            console.log(`Mobile button positions - width: ${width}, height: ${height}`);
-            console.log(`Tether: (${tetherX}, ${tetherY}), Thrust: (${thrustX}, ${thrustY})`);
-        } else if (this.screenOrientation === 'portrait') {
-            // Portrait mode - buttons at bottom of screen
-            tetherX = width - buttonSize;
-            tetherY = height - buttonSize * 1.5;
-            thrustX = width - buttonSize * 2.5;
-            thrustY = height - buttonSize * 1.5;
-        } else {
-            // Landscape mode - use regular positions but scaled
-            tetherX = TouchControlsConfig.tetherButtonPosition.x >= 0 
-                ? TouchControlsConfig.tetherButtonPosition.x 
-                : width + TouchControlsConfig.tetherButtonPosition.x;
-                
-            tetherY = TouchControlsConfig.tetherButtonPosition.y >= 0 
-                ? TouchControlsConfig.tetherButtonPosition.y 
-                : height + TouchControlsConfig.tetherButtonPosition.y;
-            
-            thrustX = TouchControlsConfig.thrustButtonPosition.x >= 0 
-                ? TouchControlsConfig.thrustButtonPosition.x 
-                : width + TouchControlsConfig.thrustButtonPosition.x;
-                
-            thrustY = TouchControlsConfig.thrustButtonPosition.y >= 0 
-                ? TouchControlsConfig.thrustButtonPosition.y 
-                : height + TouchControlsConfig.thrustButtonPosition.y;
-        }
-        
-        console.log(`Creating touch controls: joystick size: ${joystickSize}, button size: ${buttonSize}`);
-        console.log(`Button positions: Tether(${tetherX},${tetherY}), Thrust(${thrustX},${thrustY})`);
-        
-        // Create virtual joystick with configured sizes, but initially invisible
-        this.joystick = {
-            outer: this.add.image(0, 0, 'joystick-outer')
-                .setScrollFactor(0)
-                .setAlpha(0)  // Initially invisible
-                .setDepth(1000)
-                .setScale(joystickSize / 100),  // Scale based on config size
-            inner: this.add.image(0, 0, 'joystick-inner')
-                .setScrollFactor(0)
-                .setAlpha(0)  // Initially invisible
-                .setDepth(1001)
-                .setScale(joystickSize * 0.6 / 100)  // Smaller inner stick
-        };
-        
-        // Create direction indicator for visualizing thrust direction
-        this.touchDirectionIndicator = this.add.graphics()
-            .setScrollFactor(0)
-            .setDepth(999);
-        
-        // Create tether button with configured size
-        this.tetherButton = this.add.image(tetherX, tetherY, 'tether-button')
-            .setScrollFactor(0)
-            .setAlpha(TouchControlsConfig.opacity)
-            .setDepth(1000)
-            .setScale(buttonSize / 100)
-            .setInteractive()
-            .setTint(TouchControlsConfig.colors.normal);
-            
-        // Create thrust button
-        this.thrustButton = this.add.image(thrustX, thrustY, 'thrust-button')
-            .setScrollFactor(0)
-            .setAlpha(TouchControlsConfig.opacity)
-            .setDepth(1000)
-            .setScale(buttonSize / 100)
-            .setInteractive()
-            .setTint(TouchControlsConfig.colors.normal);
-
-        // Add visual outlines to buttons on mobile to make them more visible
-        if (this.isMobileDevice) {
-            // Create a glowing outline for the tether button
-            const tetherOutline = this.add.graphics()
-                .setScrollFactor(0)
-                .setDepth(999);
-            tetherOutline.lineStyle(3, 0x88ffff, 0.8);
-            tetherOutline.strokeCircle(tetherX, tetherY, buttonSize/2 + 5);
-            
-            // Create a glowing outline for the thrust button
-            const thrustOutline = this.add.graphics()
-                .setScrollFactor(0)
-                .setDepth(999);
-            thrustOutline.lineStyle(3, 0xffaa44, 0.8);
-            thrustOutline.strokeCircle(thrustX, thrustY, buttonSize/2 + 5);
-        }
-        
-        // Tether button events
-        this.tetherButton.on('pointerdown', () => {
-            // Don't stop propagation as it might be interfering with touch events
-            
-            if (this.activeTether) {
-                // Allow active tether implementation to handle the press first (bond add or reattach)
-                if (typeof this.activeTether.onTetherButtonPressed === 'function') {
-                    const handled = this.activeTether.onTetherButtonPressed();
-                    if (handled) {
-                        this.tetherButton.setTint(TouchControlsConfig.colors.active);
-                        return;
-                    }
-                }
-                // If already tethered, release the tether
-                this.activeTether.destroy();
-                this.activeTether = null;
-                console.log('Scene: Tether released by touch.');
-                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
-            } else {
-                // If not tethered, try to attach to nearest salvage
-                this.attemptTetherAttach();
-                if (this.activeTether) {
-                    this.tetherButton.setTint(TouchControlsConfig.colors.active);
-                }
-            }
-        });
-        
-        // Thrust button events
-        this.thrustButton.on('pointerdown', () => {
-            this.isThrustButtonPressed = true;
-            this.thrustButton.setTint(TouchControlsConfig.colors.active);
-            
-            // Start with initial thrust force
-            this.currentThrustForce = TouchControlsConfig.thrustParameters.initialForce;
-            
-            // Stop any existing tween
-            if (this.thrustTween) {
-                this.thrustTween.stop();
-            }
-            
-            // Create a tween to gradually increase thrust force
-            this.thrustTween = this.tweens.add({
-                targets: this,
-                currentThrustForce: TouchControlsConfig.thrustParameters.maxForce,
-                duration: TouchControlsConfig.thrustParameters.rampUpTime,
-                ease: TouchControlsConfig.thrustParameters.rampUpEase,
-            });
-        });
-        
-        this.thrustButton.on('pointerup', () => {
-            this.stopThrust();
-        });
-        
-        this.thrustButton.on('pointerout', () => {
-            this.stopThrust();
-        });
-        
-        // Track the joystick pointer ID to handle multiple simultaneous touches
-        let joystickPointerId: number | null = null;
-        
-        // Setup dynamic joystick input
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            // Don't create joystick if it's already active
-            if (joystickPointerId !== null) return;
-            // Avoid creating joystick when doing a two-finger pinch gesture
-            const activeDown = this.input.manager.pointers.filter((p: Phaser.Input.Pointer) => p.isDown).length;
-            if (activeDown >= 2) return;
-            
-            // Get the actual position considering camera zoom
-            const adjustedPosition = this.getCorrectedPointerPosition(pointer);
-            
-            // Check if pointer is over a button to avoid creating joystick there
-            const isTouchingTetherButton = this.tetherButton.getBounds().contains(adjustedPosition.x, adjustedPosition.y);
-            const isTouchingThrustButton = this.thrustButton.getBounds().contains(adjustedPosition.x, adjustedPosition.y);
-            
-            // Also check for a safe zone around the buttons
-            const safeZone = TouchControlsConfig.dynamicJoystick.buttonSafeZone;
-            const tetherButtonDist = Phaser.Math.Distance.Between(
-                adjustedPosition.x, adjustedPosition.y, 
-                this.tetherButton.x, this.tetherButton.y
-            );
-            const thrustButtonDist = Phaser.Math.Distance.Between(
-                adjustedPosition.x, adjustedPosition.y, 
-                this.thrustButton.x, this.thrustButton.y
-            );
-            
-            const isNearButtons = tetherButtonDist < this.tetherButton.displayWidth/2 + safeZone || 
-                                 thrustButtonDist < this.thrustButton.displayWidth/2 + safeZone;
-            
-            // Only create joystick if not touching or near buttons
-            if (!isTouchingTetherButton && !isTouchingThrustButton && !isNearButtons) {
-                // Position joystick at touch location (use adjusted position)
-                this.joystick.outer.setPosition(adjustedPosition.x, adjustedPosition.y);
-                this.joystick.inner.setPosition(adjustedPosition.x, adjustedPosition.y);
-                
-                // Make joystick visible with proper alpha
-                this.joystick.outer.setAlpha(TouchControlsConfig.opacity);
-                this.joystick.inner.setAlpha(TouchControlsConfig.opacity + 0.1);
-                
-                // Start tracking this pointer for joystick movement
-                joystickPointerId = pointer.id;
-                this.isTouching = true;
-                this.joystickVisible = true;
-                
-                // Stop any fade tween that might be active
-                if (this.joystickFadeTween) {
-                    this.joystickFadeTween.stop();
-                }
-                
-                // Start tracking joystick movement
-                this.updateJoystick(pointer);
-            }
-        });
-        
-        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            // Only update if this is the pointer we're tracking for the joystick
-            if (this.isTouching && pointer.isDown && pointer.id === joystickPointerId) {
-                this.updateJoystick(pointer);
-            }
-        });
-        
-        // Handle both pointer up and pointer cancel events
-        const handlePointerRelease = (pointer: Phaser.Input.Pointer) => {
-            // Only process if this is the pointer we're tracking for the joystick
-            if (pointer.id === joystickPointerId) {
-                // Fade out joystick
-                if (this.joystickVisible) {
-                    this.fadeOutJoystick();
-                }
-                
-                this.isTouching = false;
-                joystickPointerId = null;
-                
-                // Clear the direction indicator
-                this.touchDirectionIndicator.clear();
-            }
-        };
-        
-        this.input.on('pointerup', handlePointerRelease);
-        this.input.on('pointercancel', handlePointerRelease);
-    }
-    
-    // Helper method to correct pointer position for camera zoom
-    getCorrectedPointerPosition(pointer: Phaser.Input.Pointer): { x: number, y: number } {
-        // Phaser automatically handles canvas scaling for pointer coordinates
-        // The pointer.x and pointer.y are already in the correct game coordinate system
-        return { 
-            x: pointer.x,
-            y: pointer.y
-        };
-    }
+    // Touch coordinate debugging removed; React drives touch
     
     // Helper method to get world coordinates for game world interactions
     // This is for interacting with game objects that are affected by camera zoom
@@ -826,148 +539,28 @@ export default class GameScene extends Phaser.Scene {
         }
     }
     
-    // Fade out joystick smoothly
-    fadeOutJoystick() {
-        if (!this.joystickVisible) return;
-        
-        this.joystickFadeTween = this.tweens.add({
-            targets: [this.joystick.outer, this.joystick.inner],
-            alpha: 0,
-            duration: TouchControlsConfig.dynamicJoystick.fadeOutTime,
-            onComplete: () => {
-                this.joystickVisible = false;
-            }
-        });
-    }
-    
-    updateJoystick(pointer: Phaser.Input.Pointer) {
-        if (!this.joystickVisible) return;
-        
-        // Get corrected pointer position
-        const adjustedPosition = this.getCorrectedPointerPosition(pointer);
-        
-        const joystickCenterX = this.joystick.outer.x;
-        const joystickCenterY = this.joystick.outer.y;
-        
-        // Calculate distance from center using corrected position
-        const dx = adjustedPosition.x - joystickCenterX;
-        const dy = adjustedPosition.y - joystickCenterY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDistance = TouchControlsConfig.joystickSize * 0.5; // Maximum joystick movement
-        
-        if (distance > TouchControlsConfig.joystickDeadZone) { // Use configured dead zone
-            // Calculate angle
-            const angle = Math.atan2(dy, dx);
-            
-            // Normalize position to max distance
-            const limitedDistance = Math.min(distance, maxDistance);
-            const normalizedX = Math.cos(angle) * limitedDistance;
-            const normalizedY = Math.sin(angle) * limitedDistance;
-            
-            // Update inner joystick position
-            this.joystick.inner.x = joystickCenterX + normalizedX;
-            this.joystick.inner.y = joystickCenterY + normalizedY;
-            
-            // Store the joystick angle and distance for thrust calculations
-            this.joystickAngle = angle;
-            this.joystickDistance = limitedDistance / maxDistance; // Normalized 0-1
-            
-            // Set the target rotation for the ship (convert to match ship's coordinate system)
-            // Phaser uses a different angle system than standard math:
-            // 0 is to the right, PI/2 is down, PI is left, 3*PI/2 is up
-            // The ship sprite faces up at rotation 0, so we adjust by PI/2
-            this.targetRotation = angle + Math.PI/2;
-            
-            // Draw direction indicator
-            this.updateDirectionIndicator();
-        } else {
-            // Center position - no input
-            this.resetJoystick();
-        }
-    }
-    
-    updateDirectionIndicator() {
-        // Clear previous drawing
-        this.touchDirectionIndicator.clear();
-        
-        // Don't draw if not actively using joystick
-        if (!this.isTouching || !this.joystickVisible) return;
-        
-        // Calculate direction line endpoints
-        const startX = this.joystick.outer.x;
-        const startY = this.joystick.outer.y;
-        const length = TouchControlsConfig.joystickSize * 0.8; // Line length
-        const endX = startX + Math.cos(this.joystickAngle) * length;
-        const endY = startY + Math.sin(this.joystickAngle) * length;
-        
-        // Draw arrow to show rotation direction using config settings
-        this.touchDirectionIndicator.lineStyle(
-            TouchControlsConfig.directionIndicator.lineWidth, 
-            TouchControlsConfig.directionIndicator.color, 
-            TouchControlsConfig.directionIndicator.alpha
-        );
-        this.touchDirectionIndicator.beginPath();
-        this.touchDirectionIndicator.moveTo(startX, startY);
-        this.touchDirectionIndicator.lineTo(endX, endY);
-        
-        // Draw arrowhead
-        const arrowLength = TouchControlsConfig.directionIndicator.arrowSize;
-        const arrowAngle = Math.PI / 6; // 30 degrees
-        
-        const arrowLeftX = endX - arrowLength * Math.cos(this.joystickAngle + arrowAngle);
-        const arrowLeftY = endY - arrowLength * Math.sin(this.joystickAngle + arrowAngle);
-        
-        const arrowRightX = endX - arrowLength * Math.cos(this.joystickAngle - arrowAngle);
-        const arrowRightY = endY - arrowLength * Math.sin(this.joystickAngle - arrowAngle);
-        
-        this.touchDirectionIndicator.moveTo(endX, endY);
-        this.touchDirectionIndicator.lineTo(arrowLeftX, arrowLeftY);
-        this.touchDirectionIndicator.moveTo(endX, endY);
-        this.touchDirectionIndicator.lineTo(arrowRightX, arrowRightY);
-        
-        this.touchDirectionIndicator.strokePath();
-    }
-    
-    resetJoystick() {
-        if (!this.joystick || !this.joystickVisible) return;
-        
-        this.joystick.inner.x = this.joystick.outer.x;
-        this.joystick.inner.y = this.joystick.outer.y;
-        this.joystickAngle = 0;
-        this.joystickDistance = 0;
-        
-        // Clear the direction indicator
-        if (this.touchDirectionIndicator) {
-            this.touchDirectionIndicator.clear();
-        }
-    }
+    // Joystick-based touch controls removed; React handles touch intents
 
     update(_time: number, delta: number) {
         // Gameplay simulation proceeds normally (minimap removed)
         // Smooth camera zoom update
         this.cameraController?.update(delta);
         // --- Handle Input ---
-        // Handle rotation
-        if (this.isTouchDevice && this.isTouching && this.joystickVisible) {
-            // Touch controls - rotate ship to face the direction of joystick movement
-            this.rotateShipTowards(this.targetRotation, delta, this.joystickDistance);
+        // Handle rotation (desktop inputs). Touch rotation is driven by React events.
+        if (this.keys.left?.isDown) {
+            this.player.moveLeft();
+        } else if (this.keys.right?.isDown) {
+            this.player.moveRight();
         } else {
-            // Desktop: rotate towards mouse unless keyboard rotation is being used
-            if (this.keys.left?.isDown) {
-                this.player.moveLeft();
-            } else if (this.keys.right?.isDown) {
-                this.player.moveRight();
+            const pointer = this.input.activePointer;
+            if (pointer) {
+                const { x: worldX, y: worldY } = this.getWorldPointerPosition(pointer);
+                const angleToPointer = Math.atan2(worldY - this.player.y, worldX - this.player.x);
+                // Adjust for ship sprite facing up at rotation 0
+                const target = angleToPointer + Math.PI / 2;
+                this.rotateShipTowards(target, delta);
             } else {
-                const pointer = this.input.activePointer;
-                if (pointer) {
-                    const { x: worldX, y: worldY } = this.getWorldPointerPosition(pointer);
-                    const angleToPointer = Math.atan2(worldY - this.player.y, worldX - this.player.x);
-                    // Adjust for ship sprite facing up at rotation 0
-                    const target = angleToPointer + Math.PI / 2;
-                    this.rotateShipTowards(target, delta);
-                } else {
-                    this.player.stopRotation();
-                }
+                this.player.stopRotation();
             }
         }
 
@@ -993,7 +586,6 @@ export default class GameScene extends Phaser.Scene {
                 if (typeof this.activeTether.onTetherButtonPressed === 'function') {
                     const handled = this.activeTether.onTetherButtonPressed();
                     if (handled) {
-                        if (this.tetherButton) this.tetherButton.setTint(TouchControlsConfig.colors.active);
                         return;
                     }
                 }
@@ -1001,16 +593,9 @@ export default class GameScene extends Phaser.Scene {
                 this.activeTether.destroy();
                 this.activeTether = null;
                 console.log('Scene: Tether released by key press.');
-                if (this.tetherButton) {
-                    this.tetherButton.setTint(TouchControlsConfig.colors.normal);
-                }
             } else {
                 // If not tethered, try to attach to nearest salvage
                 this.attemptTetherAttach();
-                // Update tether button visual if tether attached
-                if (this.activeTether && this.tetherButton) {
-                    this.tetherButton.setTint(TouchControlsConfig.colors.active);
-                }
             }
         }
 
@@ -1279,10 +864,6 @@ export default class GameScene extends Phaser.Scene {
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
-            // Reset tether button visuals
-            if (this.tetherButton && this.tetherButton.active) {
-                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
-            }
         }
         
         // Destroy the salvage (if it's still active)
@@ -1372,10 +953,6 @@ export default class GameScene extends Phaser.Scene {
         if (this.activeTether && this.activeTether.getAttachedSalvage() === salvage) {
             this.activeTether.destroy();
             this.activeTether = null;
-            // Reset tether button visuals
-            if (this.tetherButton && this.tetherButton.active) {
-                this.tetherButton.setTint(TouchControlsConfig.colors.normal);
-            }
         }
         
         // Safely destroy the salvage
@@ -1537,14 +1114,6 @@ export default class GameScene extends Phaser.Scene {
     // Helper method to stop thrust and reset values
     stopThrust() {
         this.isThrustButtonPressed = false;
-        if (this.thrustButton && this.thrustButton.active) {
-            this.thrustButton.setTint(TouchControlsConfig.colors.normal);
-        }
-        
-        // Stop the thrust ramp-up tween
-        if (this.thrustTween) {
-            this.thrustTween.stop();
-        }
         
         // Reset thrust force
         this.currentThrustForce = 0;
@@ -1559,21 +1128,6 @@ export default class GameScene extends Phaser.Scene {
         if (this.cameraController) {
             this.cameraController.destroy();
             this.cameraController = undefined;
-        }
-        // Clean up tweens
-        if (this.joystickFadeTween) {
-            this.joystickFadeTween.stop();
-            this.joystickFadeTween = null;
-        }
-        
-        if (this.thrustTween) {
-            this.thrustTween.stop();
-            this.thrustTween = null;
-        }
-        
-        // Clear any graphics
-        if (this.touchDirectionIndicator) {
-            this.touchDirectionIndicator.clear();
         }
         
         // Remove event listeners
