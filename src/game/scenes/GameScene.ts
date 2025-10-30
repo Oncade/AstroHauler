@@ -21,6 +21,14 @@ import { applyMetaToRuntimeConfigs, getHaulParams, addSpaceBucks, loadProgress a
 import FogOfWar from '../objects/FogOfWar';
 import CameraController from '../objects/CameraController';
 
+// Map pieces configuration (simple array for now, can move to JSON later)
+const MAP_PIECES = [
+    // First test build: single piece at center of large world
+    { key: 'Debris_01', x: 10000, y: 10000, r: 0, scale: 1 },
+    // Additional pieces can be added here:
+    // { key: 'Debris_12', x: -800, y: 2300, r: 0.1, scale: 1 },
+];
+
 export default class GameScene extends Phaser.Scene {
     private player!: Player;
     private parentShip!: ParentShip;
@@ -115,16 +123,27 @@ export default class GameScene extends Phaser.Scene {
         // Reset current haul score on scene start
         this.score = 0;
 
-        // Load debris map texture details (will set world size to image size if available)
-        const debrisTexture = this.textures.get('debris_map');
-        const debrisSource = debrisTexture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
-        const debrisWidth = debrisSource ? (debrisSource as any).width : undefined;
-        const debrisHeight = debrisSource ? (debrisSource as any).height : undefined;
+        // Set world bounds based on WorldConfig.sizeMode
+        let worldWidth: number;
+        let worldHeight: number;
+        
+        if (WorldConfig.sizeMode === 'byDimensions' && WorldConfig.dimensions) {
+            // Use hard dimensions when specified
+            worldWidth = WorldConfig.dimensions.width;
+            worldHeight = WorldConfig.dimensions.height;
+        } else {
+            // Fall back to viewport multiplier (default behavior)
+            // Legacy: Load debris map texture details (will set world size to image size if available)
+            const debrisTexture = this.textures.get('debris_map');
+            const debrisSource = debrisTexture?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+            const debrisWidth = debrisSource ? (debrisSource as any).width : undefined;
+            const debrisHeight = debrisSource ? (debrisSource as any).height : undefined;
 
-        // Set world bounds; prefer debris map size when present
-        const worldSizeMultiplier = this.isMobileDevice ? WorldConfig.sizeMultiplier.mobile : WorldConfig.sizeMultiplier.desktop;
-        const worldWidth = debrisWidth ?? width * worldSizeMultiplier;
-        const worldHeight = debrisHeight ?? height * worldSizeMultiplier;
+            const worldSizeMultiplier = this.isMobileDevice ? WorldConfig.sizeMultiplier.mobile : WorldConfig.sizeMultiplier.desktop;
+            worldWidth = debrisWidth ?? width * worldSizeMultiplier;
+            worldHeight = debrisHeight ?? height * worldSizeMultiplier;
+        }
+        
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
@@ -138,12 +157,26 @@ export default class GameScene extends Phaser.Scene {
             starfield.setSize(gameSize.width, gameSize.height);
         });
 
-        // Add debris map image as the visible level layer at world origin and build collision from its alpha
-        if (debrisTexture && debrisWidth && debrisHeight) {
-            this.add.image(0, 0, 'debris_map').setOrigin(0, 0).setScrollFactor(1);
-            this.debrisTileSize = 32;
-            this.buildDebrisCollisionFromAlpha(this.debrisTileSize, 100); // tile size, alpha threshold
-        }
+        // Initialize debris tile size for collision generation
+        this.debrisTileSize = 32;
+
+        // Initialize debris static group (will be populated by spawnDebrisPiece)
+        this.debrisStaticGroup = this.physics.add.staticGroup();
+
+        // Spawn debris pieces from MAP_PIECES array
+        MAP_PIECES.forEach(piece => {
+            this.spawnDebrisPiece(piece.key, piece.x, piece.y, {
+                rotation: piece.r,
+                scale: piece.scale
+            });
+        });
+
+        // Legacy: Giant debris_map image usage (commented out for chunked map system)
+        // if (debrisTexture && debrisWidth && debrisHeight) {
+        //     this.add.image(0, 0, 'debris_map').setOrigin(0, 0).setScrollFactor(1);
+        //     this.debrisTileSize = 32;
+        //     this.buildDebrisCollisionFromAlpha(this.debrisTileSize, 100); // tile size, alpha threshold
+        // }
 
         // Create Parent Ship first
         this.parentShip = new ParentShip(this, ParentShipConfig.spawnX, ParentShipConfig.spawnY);
@@ -455,12 +488,24 @@ export default class GameScene extends Phaser.Scene {
         return { x: out.x, y: out.y };
     }
 
-    // Build a tilemap collision layer from the alpha channel of the debris map image
-    // tileSize: pixels per tile; alphaThreshold: 0..255 below which is empty
-    private buildDebrisCollisionFromAlpha(tileSize: number, alphaThreshold: number) {
-        const texture = this.textures.get('debris_map');
-        const src = texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
-        if (!src) return;
+    // Build a tilemap collision layer from the alpha channel of a debris image
+    // textureKey: texture key to use; tileSize: pixels per tile; alphaThreshold: 0..255 below which is empty
+    // offsetX/Y: world position offset for collision bodies
+    // targetGroup: optional static group to add bodies to (creates new if not provided)
+    private buildDebrisCollisionFromAlpha(
+        textureKey: string,
+        tileSize: number,
+        alphaThreshold: number,
+        offsetX: number = 0,
+        offsetY: number = 0,
+        targetGroup?: Phaser.Physics.Arcade.StaticGroup
+    ): Phaser.Physics.Arcade.StaticGroup {
+        const texture = this.textures.get(textureKey);
+        const src = texture?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+        if (!src) {
+            console.warn(`Texture ${textureKey} not found`);
+            return targetGroup || this.physics.add.staticGroup();
+        }
 
         // Draw into an offscreen canvas to read pixels
         const canvas = document.createElement('canvas');
@@ -469,7 +514,9 @@ export default class GameScene extends Phaser.Scene {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        if (!ctx) {
+            return targetGroup || this.physics.add.staticGroup();
+        }
         ctx.drawImage(src as CanvasImageSource, 0, 0);
         const imageData = ctx.getImageData(0, 0, width, height).data;
 
@@ -499,17 +546,21 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Build static physics rectangles instead of a tilemap for reliability
-        this.debrisStaticGroup = this.physics.add.staticGroup();
+        const staticGroup = targetGroup || this.physics.add.staticGroup();
+        if (!targetGroup && !this.debrisStaticGroup) {
+            this.debrisStaticGroup = staticGroup;
+        }
+        
         for (let ty = 0; ty < rows; ty++) {
             const row = data[ty];
             if (!row) continue;
             for (let tx = 0; tx < cols; tx++) {
                 if (row[tx] === 1) {
-                    const x = tx * tileSize + tileSize / 2;
-                    const y = ty * tileSize + tileSize / 2;
+                    const x = tx * tileSize + tileSize / 2 + offsetX;
+                    const y = ty * tileSize + tileSize / 2 + offsetY;
                     const block = this.add.rectangle(x, y, tileSize, tileSize, 0x000000, 0);
                     this.physics.add.existing(block, true); // true => static body
-                    this.debrisStaticGroup.add(block);
+                    staticGroup.add(block);
                 }
             }
         }
@@ -517,6 +568,63 @@ export default class GameScene extends Phaser.Scene {
         if (this.showDebrisCollisionDebug) {
             this.drawDebrisCollisionDebug();
         }
+
+        return staticGroup;
+    }
+
+    // Spawn a debris piece at the specified world position with optional rotation and scale
+    // Returns the image object and static bodies group
+    private spawnDebrisPiece(
+        textureKey: string,
+        x: number,
+        y: number,
+        options?: { rotation?: number; scale?: number }
+    ): { image: Phaser.GameObjects.Image; bodies: Phaser.Physics.Arcade.StaticGroup } {
+        const rotation = options?.rotation ?? 0;
+        const scale = options?.scale ?? 1;
+
+        // Create the visual image
+        const image = this.add.image(x, y, textureKey)
+            .setOrigin(0.5, 0.5)
+            .setRotation(rotation)
+            .setScale(scale);
+
+        // Get image dimensions for offset calculation
+        const texture = this.textures.get(textureKey);
+        const src = texture?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+        if (!src) {
+            console.warn(`Cannot spawn debris piece: texture ${textureKey} not found`);
+            return { image, bodies: this.physics.add.staticGroup() };
+        }
+
+        const width = (src as any).width;
+        const height = (src as any).height;
+
+        // Calculate offset to position collision bodies relative to image origin
+        // The image is centered at (x, y) with origin (0.5, 0.5)
+        // So the top-left corner of the image in world space is at (x - width*scale/2, y - height*scale/2)
+        // Collision bodies are positioned at tile centers relative to texture origin (0,0)
+        // So we offset by the top-left corner of the image in world space
+        const offsetX = x - (width * scale) / 2;
+        const offsetY = y - (height * scale) / 2;
+
+        // Build collision from alpha, using the existing debrisStaticGroup
+        // Note: collision bodies are axis-aligned and don't rotate with the image
+        const bodies = this.buildDebrisCollisionFromAlpha(
+            textureKey,
+            this.debrisTileSize,
+            100, // alpha threshold
+            offsetX,
+            offsetY,
+            this.debrisStaticGroup
+        );
+
+        // Ensure debrisStaticGroup is set if it wasn't before
+        if (!this.debrisStaticGroup) {
+            this.debrisStaticGroup = bodies;
+        }
+
+        return { image, bodies };
     }
 
     private drawDebrisCollisionDebug() {

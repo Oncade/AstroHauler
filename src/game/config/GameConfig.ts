@@ -282,7 +282,9 @@ export const WorldConfig = {
     sizeMultiplier: {
         mobile: 1.2,    // Smaller world for mobile
         desktop: 1.5    // Larger world for desktop
-    }
+    },
+    sizeMode: 'byDimensions' as 'byDimensions' | 'byViewportMultiplier',
+    dimensions: { width: 20000, height: 20000 } // Hard size for test build
 };
 
 // Vision / Fog-of-War Config (tunable and upgradable via meta)
