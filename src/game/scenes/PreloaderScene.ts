@@ -83,6 +83,18 @@ export default class PreloaderScene extends Phaser.Scene {
         // Level collision map image
         this.load.image('debris_map', 'assets/images/ship_debris_map.png');
 
+        // Load debris pieces for chunked map
+        this.load.image('Debirs_05', 'assets/images/Debirs_05.png'); // Note: typo in filename preserved
+        this.load.image('Debris_01', 'assets/images/Debris_01.png');
+        this.load.image('Debris_02', 'assets/images/Debris_02.png');
+        this.load.image('Debris_03', 'assets/images/Debris_03.png');
+        this.load.image('Debris_07', 'assets/images/Debris_07.png');
+        this.load.image('Debris_08', 'assets/images/Debris_08.png');
+        this.load.image('Debris_11', 'assets/images/Debris_11.png');
+        this.load.image('Debris_12', 'assets/images/Debris_12.png');
+        this.load.image('Debris_13', 'assets/images/Debris_13.png');
+        this.load.image('Debris_14', 'assets/images/Debris_14.png');
+
         // Load all salvage variants
         for (let i = 1; i <= 7; i++) {
             this.load.image(`salvage_${i}`, `assets/images/salvage_${i}.png`);
