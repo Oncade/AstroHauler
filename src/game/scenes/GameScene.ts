@@ -23,8 +23,9 @@ import CameraController from '../objects/CameraController';
 
 // Map pieces configuration (simple array for now, can move to JSON later)
 const MAP_PIECES = [
-    // First test build: single piece at center of large world
-    { key: 'Debris_01', x: 10000, y: 10000, r: 0, scale: 1 },
+    // First test build: single piece near spawn for visibility
+    // Parent ship spawns at ~(480, 540), player spawns nearby
+    { key: 'Debris_01', x: 2000, y: 2000, r: 0, scale: 1 },
     // Additional pieces can be added here:
     // { key: 'Debris_12', x: -800, y: 2300, r: 0.1, scale: 1 },
 ];
@@ -164,19 +165,20 @@ export default class GameScene extends Phaser.Scene {
         this.debrisStaticGroup = this.physics.add.staticGroup();
 
         // Spawn debris pieces from MAP_PIECES array
+        console.log(`[MapPieces] Spawning ${MAP_PIECES.length} debris pieces...`);
         MAP_PIECES.forEach(piece => {
-            this.spawnDebrisPiece(piece.key, piece.x, piece.y, {
+            console.log(`[MapPieces] Spawning ${piece.key} at (${piece.x}, ${piece.y})`);
+            const result = this.spawnDebrisPiece(piece.key, piece.x, piece.y, {
                 rotation: piece.r,
                 scale: piece.scale
             });
+            console.log(`[MapPieces] Spawned ${piece.key}: image visible=${result.image.visible}, bodies=${result.bodies.getChildren().length}`);
         });
 
         // Legacy: Giant debris_map image usage (commented out for chunked map system)
-        // if (debrisTexture && debrisWidth && debrisHeight) {
-        //     this.add.image(0, 0, 'debris_map').setOrigin(0, 0).setScrollFactor(1);
-        //     this.debrisTileSize = 32;
-        //     this.buildDebrisCollisionFromAlpha(this.debrisTileSize, 100); // tile size, alpha threshold
-        // }
+        // The old debris_map image is NO LONGER rendered here
+        // Old collision building is also disabled
+        console.log('[GameScene] Old debris_map rendering is DISABLED - using chunked map system');
 
         // Create Parent Ship first
         this.parentShip = new ParentShip(this, ParentShipConfig.spawnX, ParentShipConfig.spawnY);
@@ -373,7 +375,12 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Initialize Fog of War overlay (after world and objects are ready, before UI)
-        this.fogOfWar = new FogOfWar(this, this.worldWidth, this.worldHeight);
+        // DISABLED - Fog of War is turned off
+        console.log('[GameScene] Fog of War is DISABLED');
+        this.fogOfWar = undefined;
+        
+        // Uncomment below to re-enable FogOfWar
+        // this.fogOfWar = new FogOfWar(this, this.worldWidth, this.worldHeight);
 
         // Minimap removed; React owns UI
         
@@ -587,7 +594,9 @@ export default class GameScene extends Phaser.Scene {
         const image = this.add.image(x, y, textureKey)
             .setOrigin(0.5, 0.5)
             .setRotation(rotation)
-            .setScale(scale);
+            .setScale(scale)
+            .setScrollFactor(1) // Make sure it scrolls with camera
+            .setDepth(0); // Ensure it's visible above fog
 
         // Get image dimensions for offset calculation
         const texture = this.textures.get(textureKey);
