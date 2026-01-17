@@ -18,7 +18,7 @@ const phasermsg = () => {
 }
 
 export default defineConfig({
-    base: 'https://oncade.github.io/AstroHauler/',
+    base: process.env.VITE_BASE_URL || '/',
     plugins: [
         react(),
         phasermsg()

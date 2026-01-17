@@ -66,6 +66,10 @@ npm run build
 
 The production build will be available in the `dist` folder.
 
+### Heroku Deployment Notes
+
+This repository does not commit a `package-lock.json`. If you add or update dependencies locally, run `npm install` to regenerate your lockfile before deploying to Heroku so the build pipeline stays in sync.
+
 ## Project Structure
 
 - `src/` - Contains the React client source code
