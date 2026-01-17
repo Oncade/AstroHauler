@@ -229,6 +229,8 @@
   opacity: 0.8;
   backdrop-filter: blur(2px);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  touch-action: manipulation;
   
   transition: 
     opacity var(--duration-fast) var(--ease-in-out),

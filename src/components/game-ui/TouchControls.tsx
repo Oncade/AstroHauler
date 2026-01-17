@@ -21,6 +21,9 @@ export const TouchControls: React.FC = () => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const directionRef = useRef<HTMLDivElement>(null);
+  const joystickTouchIdRef = useRef<number | null>(null);
+  const joystickActiveRef = useRef(false);
+  const joystickStartRef = useRef({ x: 0, y: 0 });
   
   const [joystick, setJoystick] = useState<JoystickState>({
     active: false,
@@ -61,21 +64,18 @@ export const TouchControls: React.FC = () => {
   }, []);
 
   // Handle joystick touch start
-  const handleJoystickStart = useCallback((clientX: number, clientY: number) => {
-    if (!joystickRef.current) return;
-    
-    const rect = joystickRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
+  const handleJoystickStart = useCallback((clientX: number, clientY: number, touchId?: number) => {
     // Show joystick at touch position
     actions.showJoystick(clientX, clientY);
+    joystickActiveRef.current = true;
+    joystickTouchIdRef.current = typeof touchId === 'number' ? touchId : null;
+    joystickStartRef.current = { x: clientX, y: clientY };
     
     setJoystick(prev => ({
       ...prev,
       active: true,
-      startX: centerX,
-      startY: centerY,
+      startX: clientX,
+      startY: clientY,
       currentX: clientX,
       currentY: clientY,
     }));
@@ -83,13 +83,13 @@ export const TouchControls: React.FC = () => {
 
   // Handle joystick movement
   const handleJoystickMove = useCallback((clientX: number, clientY: number) => {
-    if (!joystick.active || !innerRef.current || !directionRef.current) return;
+    if (!joystickActiveRef.current || !innerRef.current || !directionRef.current) return;
 
     const { angle, distance, normalizedDistance, deltaX, deltaY } = calculateJoystick(
       clientX, 
       clientY, 
-      joystick.startX, 
-      joystick.startY
+      joystickStartRef.current.x, 
+      joystickStartRef.current.y
     );
 
     // Update inner joystick position
@@ -105,6 +105,7 @@ export const TouchControls: React.FC = () => {
       actions.updateJoystick(angle + Math.PI / 2, normalizedDistance); // Adjust angle for game coordinates
     } else {
       directionRef.current.style.opacity = '0';
+      actions.updateJoystick(angle + Math.PI / 2, 0);
     }
 
     setJoystick(prev => ({
@@ -114,7 +115,7 @@ export const TouchControls: React.FC = () => {
       angle,
       distance,
     }));
-  }, [joystick.active, joystick.startX, joystick.startY, calculateJoystick, actions]);
+  }, [calculateJoystick, actions]);
 
   // Handle joystick end
   const handleJoystickEnd = useCallback(() => {
@@ -125,6 +126,9 @@ export const TouchControls: React.FC = () => {
     directionRef.current.style.opacity = '0';
     
     actions.hideJoystick();
+    actions.updateJoystick(joystick.angle + Math.PI / 2, 0);
+    joystickActiveRef.current = false;
+    joystickTouchIdRef.current = null;
     
     setJoystick(prev => ({
       ...prev,
@@ -134,10 +138,12 @@ export const TouchControls: React.FC = () => {
       angle: 0,
       distance: 0,
     }));
-  }, [actions]);
+  }, [actions, joystick.angle]);
 
   // Handle thrust button press
-  const handleThrustStart = useCallback(() => {
+  const handleThrustStart = useCallback((event?: React.TouchEvent | React.MouseEvent) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     actions.setThrustButton(true);
     
     // Gradual thrust increase
@@ -165,7 +171,9 @@ export const TouchControls: React.FC = () => {
   }, [actions]);
 
   // Handle thrust button release
-  const handleThrustEnd = useCallback(() => {
+  const handleThrustEnd = useCallback((event?: React.TouchEvent | React.MouseEvent) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     if (thrustTweenRef.current) {
       cancelAnimationFrame(thrustTweenRef.current);
       thrustTweenRef.current = null;
@@ -187,47 +195,56 @@ export const TouchControls: React.FC = () => {
     if (!isTouchDevice) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
+      if (joystickActiveRef.current) return;
 
-      const target = e.target as HTMLElement;
-      
-      // Check if touch is on a button
-      if (target.closest(`.${styles.touchButton}`)) {
-        return; // Let button handle its own events
-      }
-
-      // Check if touch is in a safe area for joystick
-      const rect = document.body.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      
-      // Avoid button areas (rough estimation)
+      const touches = Array.from(e.changedTouches);
       const buttonSafeZone = 100;
       const rightEdge = window.innerWidth - buttonSafeZone;
       const bottomEdge = window.innerHeight - buttonSafeZone;
-      
-      if (x < rightEdge && y < bottomEdge) {
+
+      const touchToUse = touches.find((touch) => {
+        const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+        if (element?.closest(`.${styles.touchButton}`)) {
+          return false;
+        }
+
+        if (element?.closest(`.${styles.touchControlsRight}`)) {
+          return false;
+        }
+
+        return touch.clientX < rightEdge && touch.clientY < bottomEdge;
+      });
+
+      if (touchToUse) {
         e.preventDefault();
-        handleJoystickStart(touch.clientX, touch.clientY);
+        handleJoystickStart(touchToUse.clientX, touchToUse.clientY, touchToUse.identifier);
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!joystick.active) return;
-      
-      const touch = e.touches[0];
-      if (!touch) return;
+      if (!joystickActiveRef.current) return;
+
+      const activeTouch = Array.from(e.touches).find(
+        (touch) => touch.identifier === joystickTouchIdRef.current
+      );
+
+      if (!activeTouch) return;
       
       e.preventDefault();
-      handleJoystickMove(touch.clientX, touch.clientY);
+      handleJoystickMove(activeTouch.clientX, activeTouch.clientY);
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (joystick.active) {
-        e.preventDefault();
-        handleJoystickEnd();
-      }
+      if (!joystickActiveRef.current) return;
+
+      const ended = Array.from(e.changedTouches).some(
+        (touch) => touch.identifier === joystickTouchIdRef.current
+      );
+
+      if (!ended) return;
+
+      e.preventDefault();
+      handleJoystickEnd();
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -241,7 +258,7 @@ export const TouchControls: React.FC = () => {
       document.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isTouchDevice, joystick.active, handleJoystickStart, handleJoystickMove, handleJoystickEnd]);
+  }, [isTouchDevice, handleJoystickStart, handleJoystickMove, handleJoystickEnd]);
 
   // Cleanup animation on unmount
   useEffect(() => {

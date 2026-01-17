@@ -180,9 +180,7 @@ export const useTouchControls = () => {
 
   // Update joystick input
   const updateJoystick = useCallback((angle: number, distance: number) => {
-    if (distance > 0.1) { // Dead zone
-      actions.setRotation(angle, distance);
-    }
+    actions.setRotation(angle, distance);
   }, [actions]);
 
   // Handle thrust button
